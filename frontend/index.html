@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PTARM | Menu</title>
+    <link rel="icon" href="/img/Logo.png" />
+    <link rel="stylesheet" href="/vendor/fontawesome-free/css/all.min.css" />
+    <link rel="stylesheet" href="/css/estilos.css" />
+  </head>
+  <body>
+    <aside class="barra-lateral" id="barraLateral">
+      <div class="marca-menu">
+        <img src="/img/iconos/Icono de menu.png" alt="" />
+        <span>Menu</span>
+      </div>
+
+      <nav class="menu-lateral">
+        <a class="activo" href="/index.html" title="Inicio">
+          <img src="/img/iconos/Inicio.png" alt="" />
+          <span>Inicio</span>
+        </a>
+        <p class="separador-menu">Administracion</p>
+        <a href="#" title="Personal">
+          <img src="/img/iconos/personal.png" alt="" />
+          <span>Personal</span>
+        </a>
+        <a href="#" id="linkGestionarPartes" title="Gestionar partes">
+          <img src="/img/iconos/gestion.png" alt="" />
+          <span>Gestionar partes</span>
+        </a>
+        <a href="#" title="Historial">
+          <img src="/img/iconos/historial.png" alt="" />
+          <span>Historial</span>
+        </a>
+        <p class="separador-menu">Sesion</p>
+        <button type="button" id="btnCerrarSesion" title="Cerrar sesion">
+          <img src="/img/iconos/salida.png" alt="" />
+          <span>Cerrar sesion</span>
+        </button>
+      </nav>
+
+      <button class="boton-contraer" id="btnMenu" type="button" title="Contraer menu">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </aside>
+
+    <main class="contenido">
+      <header class="barra-superior">
+        <img src="/img/Logo.png" class="logo-fge" alt="Fiscalia General del Estado" />
+        <div class="usuario-superior">
+          <div class="contenedor-desplegable">
+            <button class="boton-icono" id="btnNotificaciones" type="button" title="Notificaciones">
+              <i class="fas fa-bell campana"></i>
+            </button>
+            <div class="panel-notificaciones desplegable" id="panelNotificaciones">
+              <div class="titulo-notificaciones">Centro de notificaciones</div>
+              <div class="notificacion-item">
+                <div class="icono-notificacion">
+                  <i class="fas fa-file-alt"></i>
+                </div>
+                <div>
+                  <small>Hoy</small>
+                  <p>Nueva actividad registrada</p>
+                </div>
+              </div>
+              <button class="ver-todas" type="button">Ver todas</button>
+            </div>
+          </div>
+          <span class="linea"></span>
+          <a id="linkLogin" class="link-login" href="/registroUsuarios/login.html">Iniciar sesion</a>
+          <span id="nombreUsuarioTop" class="nombre-usuario oculto">Nombre - Cargo</span>
+          <div class="contenedor-desplegable">
+            <button class="boton-perfil" id="btnPerfil" type="button" title="Menu de perfil">
+              <img id="fotoUsuarioTop" src="/img/user.png" class="foto-usuario" alt="Usuario" />
+            </button>
+            <div class="panel-perfil desplegable" id="panelPerfil">
+              <a href="#">
+                <i class="fas fa-user"></i>
+                Perfil
+              </a>
+              <button type="button" id="btnCerrarSesionPerfil">
+                <i class="fas fa-sign-out-alt"></i>
+                Cerrar sesion
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section class="panel-principal">
+        <div class="tarjeta-datos">
+          <div>
+            <h1>Datos Generales</h1>
+            <p>
+              Un parte de transito es un documento oficial que se elabora cuando ocurre un accidente vial o choque
+              de transito. Este documento registra informacion del incidente, vehiculos involucrados, personas
+              afectadas, ubicacion, fecha, hora, danos ocasionados y observaciones del personal encargado.
+            </p>
+          </div>
+          <i class="fas fa-folder icono-datos"></i>
+        </div>
+
+        <section class="seccion-lista">
+          <h2>Partes de Transito</h2>
+          <p class="descripcion">
+            Consulta expedientes IPH, revisa su estado y localiza informacion por folio, placas, fecha,
+            ministerio publico o respondiente.
+          </p>
+
+          <div class="buscador">
+            <i class="fas fa-search"></i>
+            <input id="buscarPartes" type="search" placeholder="Buscar partes" />
+          </div>
+
+          <div class="acciones-partes">
+            <button class="btn-exportar" type="button">
+              <i class="fas fa-file-export"></i>
+              Exportar
+            </button>
+            <button class="btn-crear" type="button" id="btnAbrirParte">
+              <i class="fas fa-file-medical"></i>
+              Crear Nuevo
+            </button>
+          </div>
+
+          <div class="tabla-contenedor">
+            <table>
+              <thead>
+                <tr>
+                  <th>No. Parte <i class="fas fa-caret-down"></i></th>
+                  <th>Nombre</th>
+                  <th>Periodo <i class="fas fa-caret-down"></i></th>
+                  <th>Anio <i class="fas fa-caret-down"></i></th>
+                  <th>MP Asignado</th>
+                </tr>
+              </thead>
+              <tbody id="tablaPartes">
+                <tr>
+                  <td colspan="5" class="mensaje-tabla">Inicia sesion para consultar los partes.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="paginacion">
+            <span>Filas por pagina:</span>
+            <select>
+              <option>5</option>
+              <option>10</option>
+            </select>
+            <button type="button"><i class="fas fa-angle-double-left"></i></button>
+            <button type="button"><i class="fas fa-angle-left"></i></button>
+            <button type="button"><i class="fas fa-angle-right"></i></button>
+            <button type="button"><i class="fas fa-angle-double-right"></i></button>
+          </div>
+        </section>
+
+        <section class="menu-sistema">
+          <h2>Menu del sistema</h2>
+          <p>Selecciona una opcion para trabajar con los partes de transito</p>
+
+          <div class="opciones-menu">
+            <a class="opcion" href="#">
+              <strong>01</strong>
+              <h3>Lista de partes</h3>
+              <p>Buscar, filtrar, consultar informacion y editar expedientes registrados.</p>
+            </a>
+            <a class="opcion" href="#" id="opcionCrearParte">
+              <strong>02</strong>
+              <h3>Crear nuevo parte</h3>
+              <p>Capturar folio, fecha, hora, MP, respondiente, vehiculos y personas involucradas.</p>
+            </a>
+            <a class="opcion" href="#">
+              <strong>03</strong>
+              <h3>Mi perfil</h3>
+              <p>Ver datos de cuenta, cargo, fotografia de perfil y partes creados o asignados.</p>
+            </a>
+            <a class="opcion" href="#">
+              <strong>04</strong>
+              <h3>Personal</h3>
+              <p>Administrar usuarios, roles, ministerios publicos y respondientes.</p>
+            </a>
+          </div>
+        </section>
+      </section>
+
+      <footer>Copyright &copy; PTARM 2026</footer>
+    </main>
+
+    <button class="boton-subir" type="button" title="Subir">
+      <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <div class="fondo-modal oculto" id="modalParte">
+      <form class="modal-parte" id="formParte">
+        <div class="modal-encabezado">
+          <h2>Nuevo Parte</h2>
+          <button type="button" id="btnCerrarModal" title="Cerrar">X</button>
+        </div>
+
+        <div class="modal-cuerpo">
+          <div class="grid-form superior-form">
+            <label>
+              Folio del parte
+              <input type="text" id="folioParte" placeholder="Crea un folio..." required />
+            </label>
+            <label>
+              Fecha
+              <input type="date" id="fechaParte" required />
+            </label>
+            <label>
+              Hora
+              <input type="time" id="horaParte" required />
+            </label>
+            <label>
+              MP Asignado
+              <select id="mpParte">
+                <option value="">Selecciona un MP</option>
+              </select>
+            </label>
+            <label>
+              Respondiente
+              <select id="respondienteParte">
+                <option value="">Selecciona un Respondiente</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="titulo-carros">
+            <span>Dato(s)</span>
+            <button type="button" id="btnAgregarCarro">
+              Agregar Nuevo Carro
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+
+          <div id="contenedorCarros"></div>
+        </div>
+
+        <div class="modal-acciones">
+          <button class="btn-cancelar" type="button" id="btnCancelarParte">Cancelar</button>
+          <button class="btn-guardar" type="submit">Crear Nuevo</button>
+        </div>
+      </form>
+    </div>
+
+    <script src="/vendor/sweetalert2/sweetalert2.all.min.js"></script>
+    <script src="/js/menu.js"></script>
+  </body>
+</html>
