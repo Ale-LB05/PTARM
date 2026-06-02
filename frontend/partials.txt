@@ -1,0 +1,5 @@
+Este archivo solo documenta los elementos comunes usados por las paginas:
+- sidebar azul institucional
+- topbar con logo y usuario
+- modal confirmModal
+- toast de confirmacion

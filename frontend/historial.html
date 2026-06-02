@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Historial | Partes de transito</title>
+    <link rel="icon" type="image/png" href="/img/Logo.png" />
+    <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="side-brand" href="/inicio.html"
+          ><span class="brand-icon"><img src="/img/iconos/menu.png" alt="" /></span
+          ><span class="brand-text">Menu</span></a
+        >
+        <nav class="side-nav">
+          <a data-page="inicio" href="/inicio.html"
+            ><span class="nav-icon"><img src="/img/iconos/Inicio.png" alt="" /></span
+            ><span>Inicio</span></a
+          >
+          <div class="side-section">Administracion</div>
+          <a data-page="personal" href="/personal.html"
+            ><span class="nav-icon"><img src="/img/iconos/personal.png" alt="" /></span
+            ><span>Personal</span></a
+          ><a data-page="partes" href="/partes.html"
+            ><span class="nav-icon"
+              ><img src="/img/iconos/gestion.png" alt="" /></span
+            ><span>Gestionar partes</span></a
+          ><a data-page="historial" href="/historial.html"
+            ><span class="nav-icon"><img src="/img/iconos/historial.png" alt="" /></span
+            ><span>Historial</span></a
+          >
+          <div class="side-section">Sesion</div>
+          <button onclick="logout()">
+            <span class="nav-icon"><img src="/img/iconos/salida.png" alt="" /></span
+            ><span>Cerrar sesion</span></button
+          ><button class="collapse-btn" onclick="toggleSidebar()">
+            <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
+            ><span>Ocultar</span>
+          </button>
+        </nav>
+      </aside>
+      <main class="content">
+        <header class="topbar">
+          <a href="/inicio.html"
+            ><img class="logo" src="/img/Logo.png" alt="FGE"
+          /></a>
+          <div class="user-menu">
+            <button class="user-top" type="button">
+              <i class="fas fa-bell"></i><span data-user-name></span
+              ><img data-user-photo alt="Perfil" />
+            </button>
+            <div class="user-dropdown animated--grow-in">
+              <a href="/perfil.html"><i class="fas fa-user"></i> Perfil</a
+              >
+            </div>
+          </div>
+        </header>
+        <section class="page history-page">
+          <h1>Historial de actividades</h1>
+          <div class="history-tabs" role="tablist">
+            <button class="active" data-action="CREAR" type="button">
+              <i class="far fa-file-alt"></i> Partes creados
+            </button>
+            <button data-action="EDITAR" type="button">
+              <i class="far fa-edit"></i> Partes actualizados
+            </button>
+            <button data-action="ELIMINAR" type="button">
+              <i class="far fa-trash-alt"></i> Partes eliminados
+            </button>
+          </div>
+          <div class="history-tools">
+            <div class="search-wrap">
+              <i class="fas fa-search"></i>
+              <input id="historySearch" placeholder="Buscar actividad con folio, creador o fecha" />
+            </div>
+            <button class="btn icon-only" type="button" onclick="focusHistoryDate()">
+              <i class="far fa-calendar"></i>
+            </button>
+            <input id="historyDate" class="date-ghost" type="date" />
+          </div>
+          <div class="table-wrap history-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Folio</th>
+                  <th id="historyPersonLabel">Creador</th>
+                  <th>Hora</th>
+                  <th>Fecha</th>
+                  <th>MP</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="historyRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+    <div id="toast" class="toast"></div>
+    <div id="confirmModal" class="modal-backdrop">
+      <div class="modal small">
+        <div class="modal-title"><h2 data-confirm-title></h2></div>
+        <div class="modal-body" style="text-align: center">
+          <div class="alert-icon">!</div>
+          <p data-confirm-text></p>
+          <div class="form-actions">
+            <button class="btn" data-confirm-no>Cancelar</button
+            ><button class="btn red" data-confirm-yes>Aceptar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="/js/common.js"></script>
+    <script src="/js/historial.js"></script>
+  </body>
+</html>
