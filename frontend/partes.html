@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Consultas | Partes de transito</title>
+    <link rel="icon" type="image/png" href="/img/Logo.png" />
+    <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="side-brand" href="/inicio.html"
+          ><span class="brand-icon"><img src="/img/iconos/menu.png" alt="" /></span
+          ><span class="brand-text">Menu</span></a
+        >
+        <nav class="side-nav">
+          <a data-page="inicio" href="/inicio.html"
+            ><span class="nav-icon"><img src="/img/iconos/Inicio.png" alt="" /></span
+            ><span>Inicio</span></a
+          >
+          <div class="side-section">Administracion</div>
+          <a data-page="personal" href="/personal.html"
+            ><span class="nav-icon"><img src="/img/iconos/personal.png" alt="" /></span
+            ><span>Personal</span></a
+          ><a data-page="partes" href="/partes.html"
+            ><span class="nav-icon"
+              ><img src="/img/iconos/gestion.png" alt="" /></span
+            ><span>Gestionar partes</span></a
+          ><a data-page="historial" href="/historial.html"
+            ><span class="nav-icon"><img src="/img/iconos/historial.png" alt="" /></span
+            ><span>Historial</span></a
+          >
+          <div class="side-section">Sesion</div>
+          <button onclick="logout()">
+            <span class="nav-icon"><img src="/img/iconos/salida.png" alt="" /></span
+            ><span>Cerrar sesion</span></button
+          ><button class="collapse-btn" onclick="toggleSidebar()">
+            <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
+            ><span>Ocultar</span>
+          </button>
+        </nav>
+      </aside>
+      <main class="content">
+        <header class="topbar">
+          <a href="/inicio.html"
+            ><img class="logo" src="/img/Logo.png" alt="FGE"
+          /></a>
+          <div class="user-menu">
+            <button class="user-top" type="button">
+              <i class="fas fa-bell"></i><span data-user-name></span
+              ><img data-user-photo alt="Perfil" />
+            </button>
+            <div class="user-dropdown animated--grow-in">
+              <a href="/perfil.html"><i class="fas fa-user"></i> Perfil</a
+              >
+            </div>
+          </div>
+        </header>
+        <section class="page">
+          <h1>Partes de transito</h1>
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <input
+                id="partSearch"
+                class="search"
+                placeholder="Buscar Partes"
+              /><button
+                class="btn icon-only view-toggle active"
+                id="listViewBtn"
+                type="button"
+                title="Vista de lista"
+              >
+                <i class="fas fa-list"></i></button
+              ><button
+                class="btn icon-only view-toggle"
+                id="gridViewBtn"
+                type="button"
+                title="Vista de cuadros"
+              >
+                <i class="fas fa-th"></i></button>
+            </div>
+            <div class="toolbar-right">
+              <button class="btn blue" onclick="openExport()">
+                <i class="fas fa-file-export"></i> Exportar</button
+              ><button class="btn green" onclick="openParteModal('create')">
+                <i class="fas fa-file-medical"></i> Crear Nuevo
+              </button>
+            </div>
+          </div>
+          <div id="partesListView" class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>No.Parte</th>
+                  <th>Nombre</th>
+                  <th>Fecha</th>
+                  <th>MP</th>
+                  <th>Encargado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="partesRows"></tbody>
+            </table>
+          </div>
+          <div id="partesGridView" class="partes-grid-view"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="parteModal" class="modal-backdrop">
+      <div class="modal">
+        <div class="modal-title">
+          <h2 id="parteModalTitle">Nuevo Parte</h2>
+          <button class="modal-close" onclick="closeModal('parteModal')">
+            X
+          </button>
+        </div>
+        <form id="parteForm" class="modal-body">
+          <input type="hidden" name="id_parte" />
+          <div class="form-grid cols-3">
+            <label
+              >Folio del parte<input
+                name="folio"
+                placeholder="Crea un folio..." /></label
+            ><label>Fecha<input type="date" name="fecha" /></label
+            ><label>Hora<input type="time" name="hora" /></label>
+          </div>
+          <div class="form-grid cols-2">
+            <label
+              >MP Asignado<input
+                name="mp_nombre"
+                placeholder="Selecciona un MP" /></label
+            ><label
+              >Respondiente<input
+                name="respondiente_nombre"
+                placeholder="Selecciona un Respondiente"
+            /></label>
+          </div>
+          <div class="sub-row">
+            <span>Dato(s)</span
+            ><button class="tiny-add" id="addVehicleBtn" type="button">
+              Agregar Nuevo Carro +
+            </button>
+          </div>
+          <div id="vehiclesWrap" class="vehicles-wrap"></div>
+          <div class="sub-row"><span>Personas involucradas</span></div>
+          <fieldset>
+            <div class="form-grid cols-3">
+              <div class="form-grid">
+                <label
+                  >No. Personas<input
+                    type="number"
+                    name="numero_personas"
+                    placeholder="Numero de pers..." /></label
+                ><label
+                  >No. Vehiculo<select name="id_vehiculo_personas" id="vehiclePersonSelect">
+                    <option>Selecciona un carro</option>
+                  </select></label
+                >
+              </div>
+              <div>
+                <strong>Complementos</strong>
+                <div class="check-list">
+                  <label
+                    ><input type="checkbox" name="personas_fallecidas" />
+                    Personas fallecidas</label
+                  ><label
+                    ><input type="checkbox" name="personas_heridas" /> Personas
+                    heridas</label
+                  ><label
+                    ><input type="checkbox" name="otros" /> Otros...</label
+                  >
+                </div>
+              </div>
+              <div>
+                <strong>Personas heridas</strong
+                ><label
+                  >Cuantas personas hubo heridas?<input
+                    type="number"
+                    name="numero_heridos"
+                    placeholder="Numero de person..." /></label
+                ><strong>Gravedad?</strong>
+                <div class="radio-list">
+                  <label
+                    ><input type="radio" name="gravedad" value="Bajo" />
+                    Bajo</label
+                  ><label
+                    ><input type="radio" name="gravedad" value="Alto" />
+                    Alto</label
+                  ><label
+                    ><input type="radio" name="gravedad" value="Medio" />
+                    Medio</label
+                  ><label
+                    ><input type="radio" name="gravedad" value="Otro" />
+                    Otro</label
+                  >
+                </div>
+              </div>
+            </div>
+          </fieldset>
+          <div class="form-grid cols-3">
+            <label
+              >Usuario encargado<select
+                name="asignado_a"
+                id="asignadoSelect"
+              ></select></label
+            ><label
+              >Estado<select name="estado">
+                <option>Activo</option>
+                <option>Borrador</option>
+                <option>Cerrado</option>
+                <option>Archivado</option>
+                <option>Cancelado</option>
+              </select></label
+            ><label
+              >Gravedad general<select name="gravedad_general">
+                <option>Sin clasificar</option>
+                <option>Bajo</option>
+                <option>Medio</option>
+                <option>Alto</option>
+                <option>Otro</option>
+              </select></label
+            >
+          </div>
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn red"
+              onclick="closeModal('parteModal')"
+            >
+              Cancelar</button
+            ><button class="btn green" type="submit" id="parteSubmit">
+              Crear Nuevo
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="partDetailModal" class="modal-backdrop">
+      <div class="modal detail">
+        <div class="modal-title">
+          <h2>Informacion del parte</h2>
+          <button class="modal-close" onclick="closeModal('partDetailModal')">
+            X
+          </button>
+        </div>
+        <div class="modal-body" id="partDetailBody"></div>
+      </div>
+    </div>
+
+    <div id="exportModal" class="modal-backdrop">
+      <div class="modal export">
+        <div class="modal-title">
+          <h2>Exportar</h2>
+          <button class="modal-close" onclick="closeModal('exportModal')">
+            X
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="export-head">
+            <div>
+              <strong>Partes de transito</strong>
+              <p>Selecciona los registros que deseas preparar. Cada parte se exportara con sus datos completos.</p>
+            </div>
+            <div class="export-count" id="exportCount">0 seleccionados</div>
+          </div>
+          <div class="toolbar export-toolbar">
+            <input id="exportSearch" class="search" placeholder="Buscar Partes" />
+            <label class="inline-check"
+              ><input id="exportSelectAll" type="checkbox" /> Seleccionar todo</label
+            >
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>No.Parte</th>
+                  <th>Nombre</th>
+                  <th>Fecha</th>
+                  <th>MP</th>
+                  <th>Encargado</th>
+                  <th>Seleccionar</th>
+                </tr>
+              </thead>
+              <tbody id="exportRows"></tbody>
+            </table>
+          </div>
+          <div class="form-actions">
+            <button class="btn blue" type="button" onclick="exportPartes('pdf')">
+              <i class="fas fa-file-pdf"></i> PDF</button
+            ><button class="btn green" type="button" onclick="exportPartes('excel')">
+              <i class="fas fa-file-excel"></i> Excel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="toast" class="toast"></div>
+    <div id="confirmModal" class="modal-backdrop">
+      <div class="modal small">
+        <div class="modal-title"><h2 data-confirm-title></h2></div>
+        <div class="modal-body" style="text-align: center">
+          <div class="alert-icon">!</div>
+          <p data-confirm-text></p>
+          <div class="form-actions">
+            <button class="btn" data-confirm-no>Cancelar</button
+            ><button class="btn red" data-confirm-yes>Aceptar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="/js/common.js"></script>
+    <script src="/js/partes.js"></script>
+    <script src="/vendor/jquery/jquery.min.js"></script>
+    <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/vendor/jquery-easing/jquery.easing.min.js"></script>
+    <script src="/js/sb-admin-2.min.js"></script>
+  </body>
+</html>

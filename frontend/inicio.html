@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inicio | Partes de transito</title>
+    <link rel="icon" type="image/png" href="/img/Logo.png" />
+    <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="side-brand" href="/inicio.html"
+          ><span class="brand-icon"><img src="/img/iconos/menu.png" alt="" /></span
+          ><span class="brand-text">Menu</span></a
+        >
+        <nav class="side-nav">
+          <a data-page="inicio" href="/inicio.html"
+            ><span class="nav-icon"><img src="/img/iconos/Inicio.png" alt="" /></span
+            ><span>Inicio</span></a
+          >
+          <div class="side-section">Administracion</div>
+          <a data-page="personal" href="/personal.html"
+            ><span class="nav-icon"><img src="/img/iconos/personal.png" alt="" /></span
+            ><span>Personal</span></a
+          >
+          <a data-page="partes" href="/partes.html"
+            ><span class="nav-icon"
+              ><img src="/img/iconos/gestion.png" alt="" /></span
+            ><span>Gestionar partes</span></a
+          >
+          <a data-page="historial" href="/historial.html"
+            ><span class="nav-icon"><img src="/img/iconos/historial.png" alt="" /></span
+            ><span>Historial</span></a
+          >
+          <div class="side-section">Sesion</div>
+          <button onclick="logout()">
+            <span class="nav-icon"><img src="/img/iconos/salida.png" alt="" /></span
+            ><span>Cerrar sesion</span>
+          </button>
+          <button class="collapse-btn" onclick="toggleSidebar()">
+            <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
+            ><span>Ocultar</span>
+          </button>
+        </nav>
+      </aside>
+      <main class="content">
+        <header class="topbar">
+          <a href="/inicio.html"
+            ><img class="logo" src="/img/Logo.png" alt="FGE"
+          /></a>
+          <div class="user-menu">
+            <button class="user-top" type="button">
+              <i class="fas fa-bell"></i><span data-user-name></span
+              ><img data-user-photo alt="Perfil" />
+            </button>
+            <div class="user-dropdown animated--grow-in">
+              <a href="/perfil.html"><i class="fas fa-user"></i> Perfil</a>
+            </div>
+          </div>
+        </header>
+        <section class="page">
+          <div class="hero-card">
+            <div>
+              <h1>Datos Generales</h1>
+              <p>
+                Un parte de transito es un documento oficial que se elabora
+                cuando ocurre un accidente vial o choque de transito. Este
+                documento registra toda la informacion relacionada con el
+                incidente, como los datos de los vehiculos involucrados,
+                personas afectadas, ubicacion, fecha, hora y observaciones
+                realizadas por el personal encargado.
+              </p>
+            </div>
+            <div class="hero-icon">
+              <img src="/img/iconos/carros.png" alt="Escudo digital" />
+            </div>
+          </div>
+          <div class="section-title">
+            <h2>Titulo Referente a Partes</h2>
+            <p>
+              Consulta los registros recientes y accede a las funciones
+              principales del sistema.
+            </p>
+          </div>
+          <input
+            id="homeSearch"
+            class="search"
+            style="display: block; margin: 0 auto 22px"
+            placeholder="Buscar Partes"
+          />
+          <div class="table-controls">
+            <label class="inline-check"
+              >Mostrar
+              <select id="homePageSize">
+                <option value="5">5 partes</option>
+                <option value="10">10 partes</option>
+                <option value="15">15 partes</option>
+                <option value="20">20 partes</option>
+              </select></label
+            >
+            <div class="pager">
+              <button class="btn icon-only" id="homePrevPage" type="button" title="Pagina anterior">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <span id="homePageInfo"></span>
+              <button class="btn icon-only" id="homeNextPage" type="button" title="Pagina siguiente">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>No. Parte</th>
+                  <th>Nombre</th>
+                  <th>Fecha</th>
+                  <th>MP Asignado</th>
+                </tr>
+              </thead>
+              <tbody id="homeRows"></tbody>
+            </table>
+          </div>
+          <div class="section-title">
+            <h2>Menu del sistema</h2>
+            <p>
+              Selecciona una opcion para trabajar con los partes de transito
+            </p>
+          </div>
+          <div class="menu-grid">
+            <a class="menu-card hover-lift" href="/partes.html"
+              ><span>01</span>
+              <h3>Lista de partes</h3>
+              <p>Crear, buscar, filtrar, consultar informacion y editar.</p></a
+            >
+            <a class="menu-card hover-lift" href="/historial.html"
+              ><span>02</span>
+              <h3>Historial</h3>
+              <p>
+                Consultar acciones realizadas en el sistema.
+              </p></a
+            >
+            <a class="menu-card hover-lift" href="/perfil.html"
+              ><span>03</span>
+              <h3>Mi perfil</h3>
+              <p>Ver datos de cuenta, foto de perfil y partes asignados.</p></a
+            >
+            <a class="menu-card hover-lift" href="/personal.html"
+              ><span>04</span>
+              <h3>Personal</h3>
+              <p>
+                Administrar usuarios, ministerios publicos y respondientes.
+              </p></a
+            >
+          </div>
+        </section>
+      </main>
+    </div>
+    <div id="toast" class="toast"></div>
+    <div id="confirmModal" class="modal-backdrop">
+      <div class="modal small">
+        <div class="modal-title"><h2 data-confirm-title></h2></div>
+        <div class="modal-body" style="text-align: center">
+          <div class="alert-icon">!</div>
+          <p data-confirm-text></p>
+          <div class="form-actions">
+            <button class="btn" data-confirm-no>Cancelar</button
+            ><button class="btn red" data-confirm-yes>Aceptar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="/js/common.js"></script>
+    <script src="/js/inicio.js"></script>
+    <script src="/vendor/jquery/jquery.min.js"></script>
+    <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/vendor/jquery-easing/jquery.easing.min.js"></script>
+    <script src="/js/sb-admin-2.min.js"></script>
+  </body>
+</html>

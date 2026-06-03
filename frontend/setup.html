@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crear administrador</title>
+    <link rel="icon" type="image/png" href="/img/Logo.png" />
+    <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+  <body class="auth-page">
+    <main class="login-card">
+      <img src="/img/Logo.png" alt="FGE" />
+      <h1>Crear administrador</h1>
+      <p>Antes de usar el sistema crea el primer usuario administrador.</p>
+      <form id="setupForm">
+        <input type="text" name="nombre" placeholder="Nombre completo" required />
+        <input type="email" name="correo" placeholder="correo@dominio.com" required />
+        <input type="password" name="password" placeholder="Contrasena" required />
+        <input type="text" name="instituto" placeholder="Instituto" />
+        <input type="text" name="cargo_grado" placeholder="Cargo/Grado" />
+        <button type="submit">Crear administrador</button>
+      </form>
+    </main>
+    <script src="/js/auth.js"></script>
+  </body>
+</html>
