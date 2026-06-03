@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Personal | Partes de transito</title>
-    <link rel="icon" type="image/png" href="/img/Logo.png" />
+    <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="/css/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -60,25 +60,41 @@
           </div>
         </header>
         <section class="page">
+          <h1>Panel de Personal</h1>
           <div class="toolbar">
-            <h1>Panel de Personal</h1>
+            <div class="toolbar-left personal-toolbar-left">
+              <input
+                id="userSearch"
+                class="search"
+                placeholder="Buscar Usuario"
+              /><button class="btn icon-only view-toggle active" id="userListViewBtn" type="button" title="Vista de lista"><i class="fas fa-list"></i></button
+              ><button class="btn icon-only view-toggle" id="userGridViewBtn" type="button" title="Vista de cuadros"><i class="fas fa-th"></i></button>
+            </div>
             <div class="toolbar-right">
-              <a class="btn" href="/perfil.html"
-                ><i class="fas fa-user-circle"></i> Perfil</a
-              ><button class="btn green" onclick="openUserModal('create')">
+              <button class="btn green" onclick="openUserModal('create')">
                 <i class="fas fa-user-plus"></i> Nuevo Usuario
               </button>
             </div>
           </div>
-          <div class="toolbar-left">
-            <input
-              id="userSearch"
-              class="search"
-              placeholder="Buscar Usuario"
-            /><button class="btn" onclick="loadUsers()">
-              <i class="fas fa-filter"></i> Filtrar</button
-            ><button class="btn icon-only view-toggle active" id="userListViewBtn" type="button" title="Vista de lista"><i class="fas fa-list"></i></button
-            ><button class="btn icon-only view-toggle" id="userGridViewBtn" type="button" title="Vista de cuadros"><i class="fas fa-th"></i></button>
+          <div class="table-controls compact">
+            <label class="inline-check"
+              >Mostrar
+              <select id="userPageSize">
+                <option value="5">5 usuarios</option>
+                <option value="10">10 usuarios</option>
+                <option value="15">15 usuarios</option>
+                <option value="20">20 usuarios</option>
+              </select></label
+            >
+            <div class="pager">
+              <button class="btn icon-only" id="userPrevPage" type="button" title="Pagina anterior">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <span id="userPageInfo"></span>
+              <button class="btn icon-only" id="userNextPage" type="button" title="Pagina siguiente">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
           </div>
           <div id="userListView" class="table-wrap">
             <table>
@@ -126,7 +142,7 @@
               >Rol<select name="id_rol">
                 <option value="1">Administrador</option>
                 <option value="2">Capturista</option>
-                <option value="3">Consulta</option>
+                <option value="3">Auxiliar</option>
               </select></label
             >
           </div>

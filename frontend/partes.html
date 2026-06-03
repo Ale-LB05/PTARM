@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Consultas | Partes de transito</title>
-    <link rel="icon" type="image/png" href="/img/Logo.png" />
+    <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="/css/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -83,10 +83,30 @@
                 <i class="fas fa-th"></i></button>
             </div>
             <div class="toolbar-right">
-              <button class="btn blue" onclick="openExport()">
+              <button class="btn blue" id="openExportBtn" onclick="openExport()">
                 <i class="fas fa-file-export"></i> Exportar</button
-              ><button class="btn green" onclick="openParteModal('create')">
+              ><button class="btn green" id="createParteBtn" onclick="openParteModal('create')">
                 <i class="fas fa-file-medical"></i> Crear Nuevo
+              </button>
+            </div>
+          </div>
+          <div class="table-controls compact">
+            <label class="inline-check"
+              >Mostrar
+              <select id="partesPageSize">
+                <option value="5">5 partes</option>
+                <option value="10">10 partes</option>
+                <option value="15">15 partes</option>
+                <option value="20">20 partes</option>
+              </select></label
+            >
+            <div class="pager">
+              <button class="btn icon-only" id="partesPrevPage" type="button" title="Pagina anterior">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <span id="partesPageInfo"></span>
+              <button class="btn icon-only" id="partesNextPage" type="button" title="Pagina siguiente">
+                <i class="fas fa-chevron-right"></i>
               </button>
             </div>
           </div>
@@ -130,14 +150,18 @@
           </div>
           <div class="form-grid cols-2">
             <label
-              >MP Asignado<input
+              >MP Asignado<div class="lookup-field"><input
                 name="mp_nombre"
-                placeholder="Selecciona un MP" /></label
+                list="mpOptions"
+                autocomplete="off"
+                placeholder="Busca o selecciona un MP" /><i class="fas fa-search"></i></div><datalist id="mpOptions"></datalist></label
             ><label
-              >Respondiente<input
+              >Respondiente<div class="lookup-field"><input
                 name="respondiente_nombre"
+                list="respondienteOptions"
+                autocomplete="off"
                 placeholder="Selecciona un Respondiente"
-            /></label>
+            /><i class="fas fa-search"></i></div><datalist id="respondienteOptions"></datalist></label>
           </div>
           <div class="sub-row">
             <span>Dato(s)</span
@@ -147,8 +171,8 @@
           </div>
           <div id="vehiclesWrap" class="vehicles-wrap"></div>
           <div class="sub-row"><span>Personas involucradas</span></div>
-          <fieldset>
-            <div class="form-grid cols-3">
+          <fieldset class="people-fieldset">
+            <div class="people-grid">
               <div class="form-grid">
                 <label
                   >No. Personas<input
@@ -175,29 +199,58 @@
                   >
                 </div>
               </div>
-              <div>
-                <strong>Personas heridas</strong
-                ><label
-                  >Cuantas personas hubo heridas?<input
-                    type="number"
-                    name="numero_heridos"
-                    placeholder="Numero de person..." /></label
-                ><strong>Gravedad?</strong>
-                <div class="radio-list">
+            </div>
+            <div id="complementQuestions" class="complement-questions">
+              <div class="complement-panel" data-complement-panel="personas_fallecidas" hidden>
+                <h4>Datos de personas fallecidas</h4>
+                <div class="form-grid cols-2">
                   <label
-                    ><input type="radio" name="gravedad" value="Bajo" />
-                    Bajo</label
+                    >Cuantas personas fallecieron?<input
+                      type="number"
+                      name="numero_fallecidos"
+                      placeholder="Numero de personas" /></label
                   ><label
-                    ><input type="radio" name="gravedad" value="Alto" />
-                    Alto</label
-                  ><label
-                    ><input type="radio" name="gravedad" value="Medio" />
-                    Medio</label
-                  ><label
-                    ><input type="radio" name="gravedad" value="Otro" />
-                    Otro</label
+                    >Observacion de fallecidos<input
+                      name="observacion_fallecidos"
+                      placeholder="Detalle breve" /></label
                   >
                 </div>
+              </div>
+              <div class="complement-panel" data-complement-panel="personas_heridas" hidden>
+                <h4>Datos de personas heridas</h4>
+                <div class="form-grid cols-2">
+                  <label
+                    >Cuantas personas hubo heridas?<input
+                      type="number"
+                      name="numero_heridos"
+                      placeholder="Numero de personas" /></label
+                  ><div>
+                    <strong>Gravedad?</strong>
+                    <div class="radio-list">
+                      <label
+                        ><input type="radio" name="gravedad" value="Bajo" />
+                        Bajo</label
+                      ><label
+                        ><input type="radio" name="gravedad" value="Alto" />
+                        Alto</label
+                      ><label
+                        ><input type="radio" name="gravedad" value="Medio" />
+                        Medio</label
+                      ><label
+                        ><input type="radio" name="gravedad" value="Otro" />
+                        Otro</label
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="complement-panel" data-complement-panel="otros" hidden>
+                <h4>Otros datos</h4>
+                <label
+                  >Observaciones generales<input
+                    name="observaciones"
+                    placeholder="Describe otro dato relevante" /></label
+                >
               </div>
             </div>
           </fieldset>

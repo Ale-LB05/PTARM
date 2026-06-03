@@ -31,6 +31,7 @@ const respondienteParte = document.getElementById("respondienteParte");
 
 let contadorCarros = 0;
 
+/** Configura nombre, cargo/foto y estado visual del usuario en el encabezado. */
 function configurarUsuario() {
   if (!token) return;
 
@@ -44,6 +45,7 @@ function configurarUsuario() {
   };
 }
 
+/** Convierte fechas yyyy-mm-dd a dd/mm/yyyy para mostrarlas en tablas. */
 function formatoFecha(fecha) {
   if (!fecha) return "-";
   const fechaLimpia = String(fecha).split("T")[0];
@@ -52,11 +54,13 @@ function formatoFecha(fecha) {
   return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
+/** Obtiene solo el anio de una fecha. */
 function obtenerAnio(fecha) {
   if (!fecha) return "-";
   return String(fecha).split("-")[0];
 }
 
+/** Pinta la tabla de partes del menu anterior. */
 function dibujarPartes(partes) {
   if (!Array.isArray(partes) || partes.length === 0) {
     tablaPartes.innerHTML = '<tr><td colspan="5" class="mensaje-tabla">No hay partes registrados.</td></tr>';
@@ -81,6 +85,7 @@ function dibujarPartes(partes) {
     .join("");
 }
 
+/** Carga partes desde la API usando el token guardado. */
 async function cargarPartes(busqueda = "") {
   if (!token) return;
 
@@ -106,6 +111,7 @@ async function cargarPartes(busqueda = "") {
   }
 }
 
+/** Carga catalogos de MP y respondientes para el formulario anterior. */
 async function cargarCatalogos() {
   if (!token) return;
 
@@ -132,6 +138,7 @@ async function cargarCatalogos() {
   }
 }
 
+/** Agrega una seccion de carro con campos de vehiculo y personas involucradas. */
 function crearCarro() {
   contadorCarros += 1;
   const numero = contadorCarros;
@@ -217,6 +224,7 @@ function crearCarro() {
   contenedorCarros.appendChild(carro);
 }
 
+/** Abre el modal de crear parte y prepara catalogos/carro inicial. */
 function abrirModalParte() {
   if (!token) {
     Swal.fire({
@@ -238,15 +246,18 @@ function abrirModalParte() {
   }
 }
 
+/** Cierra el modal anterior de crear parte. */
 function cerrarModalParte() {
   modalParte.classList.add("oculto");
 }
 
+/** Lee y limpia el valor de un campo dentro de una tarjeta de carro. */
 function obtenerValor(carro, nombreCampo) {
   const campo = carro.querySelector(`[name="${nombreCampo}"]`);
   return campo ? campo.value.trim() : "";
 }
 
+/** Convierte todas las tarjetas de carro en objetos para enviarlos a la API. */
 function obtenerCarros() {
   return [...contenedorCarros.querySelectorAll(".carro-parte")].map((carro) => {
     const numero = carro.dataset.numero;
@@ -270,6 +281,7 @@ function obtenerCarros() {
   });
 }
 
+/** Guarda un parte desde el formulario anterior y recarga la tabla. */
 async function guardarParte(e) {
   e.preventDefault();
 
@@ -327,17 +339,20 @@ async function guardarParte(e) {
   }
 }
 
+/** Cierra los paneles desplegables del encabezado. */
 function cerrarDesplegables() {
   panelPerfil.classList.remove("abierto");
   panelNotificaciones.classList.remove("abierto");
 }
 
+/** Abre o cierra un panel desplegable manteniendo solo uno activo. */
 function alternarDesplegable(panel) {
   const estabaAbierto = panel.classList.contains("abierto");
   cerrarDesplegables();
   if (!estabaAbierto) panel.classList.add("abierto");
 }
 
+/** Confirma el cierre de sesion, limpia datos locales y vuelve al login. */
 function cerrarSesion() {
   Swal.fire({
     title: "Cerrar sesion",

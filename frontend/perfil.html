@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Perfil | Partes de transito</title>
-    <link rel="icon" type="image/png" href="/img/Logo.png" />
+    <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="/css/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -61,38 +61,65 @@
         </header>
         <section class="page">
           <h1>Mi Perfil</h1>
-          <form id="profileForm" class="profile-layout">
-            <label
-              ><img
+          <form id="profileForm" class="profile-layout account-layout">
+            <div>
+              <img
                 id="profilePhoto"
                 class="profile-avatar"
                 src="/img/usuario.png"
-                alt="Perfil" /><input
-                type="file"
-                name="imagen"
-                accept="image/*"
-            /></label>
-            <div>
+                alt="Perfil" />
+            </div>
+            <div class="account-card">
               <h3>Informacion de cuenta</h3>
-              <div class="profile-fields">
-                <label><span>Nombre</span><input name="nombre" /></label
-                ><label
-                  ><span>Correo</span
-                  ><input type="email" name="correo" /></label
-                ><label
-                  ><span>Contrasena</span
-                  ><input
-                    type="password"
-                    name="password"
-                    placeholder="Dejar vacia para conservar" /></label
-                ><label><span>Instituto</span><input name="instituto" /></label
-                ><label
-                  ><span>Cargo/Grado</span><input name="cargo_grado"
-                /></label>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>Nombre</span>
+                </div>
+                <strong id="profileName">Usuario</strong>
+                <span></span>
               </div>
-              <button class="btn black" style="margin-top: 14px">
-                Guardar cambios
-              </button>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>Correo</span>
+                </div>
+                <strong id="profileEmail">correo@dominio.com</strong>
+                <button
+                  class="account-action"
+                  type="button"
+                  id="openEmailModal"
+                  title="Editar correo"
+                >
+                  <i class="fas fa-pen"></i>
+                </button>
+              </div>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>Contrasena</span>
+                </div>
+                <strong>••••••••</strong>
+                <button
+                  class="account-action"
+                  type="button"
+                  id="openPasswordModal"
+                  title="Cambiar contrasena"
+                >
+                  <i class="fas fa-key"></i>
+                </button>
+              </div>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>Cargo</span>
+                </div>
+                <strong id="profileCargo">Sin cargo</strong>
+                <span></span>
+              </div>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>Institucion</span>
+                </div>
+                <strong id="profileInstitute">Sin institucion</strong>
+                <span></span>
+              </div>
             </div>
           </form>
           <h1 style="margin-top: 70px">Mis partes creados o asignados</h1>
@@ -112,6 +139,83 @@
           </div>
         </section>
       </main>
+    </div>
+    <div id="emailModal" class="modal-backdrop">
+      <div class="modal profile-modal">
+        <div class="modal-title profile-modal-title">
+          <h2>Editar Correo</h2>
+          <button class="modal-close" onclick="closeProfileModal('emailModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="emailForm" class="modal-body">
+          <h3 class="modal-section-title">
+            Actualizacion de Contacto
+          </h3>
+          <label class="input-with-icon"
+            >Nuevo Correo Electronico
+            <span>
+              <input type="email" name="correo" placeholder="correo@dominio.com" />
+            </span></label
+          >
+          <div class="form-actions">
+            <button class="btn red outline" type="button" onclick="closeProfileModal('emailModal')">
+              Cancelar</button
+            ><button class="btn teal" type="submit">
+              <i class="fas fa-save"></i> Actualizar Correo
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="passwordModal" class="modal-backdrop">
+      <div class="modal profile-modal">
+        <div class="modal-title profile-modal-title">
+          <h2>Seguridad</h2>
+          <button class="modal-close" onclick="closeProfileModal('passwordModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="passwordForm" class="modal-body">
+          <h3 class="modal-section-title">
+            Cambio de Contrasena
+          </h3>
+          <label class="input-with-icon"
+            >Contrasena Actual
+            <span>
+              <input type="password" name="current_password" placeholder="Ingresa tu clave actual" />
+              <button type="button" class="toggle-secret" title="Mostrar contrasena">
+                <i class="fas fa-eye"></i>
+              </button>
+            </span></label
+          >
+          <label class="input-with-icon"
+            >Nueva Contrasena
+            <span>
+              <input type="password" name="password" placeholder="Minimo 6 caracteres" />
+              <button type="button" class="toggle-secret" title="Mostrar contrasena">
+                <i class="fas fa-eye"></i>
+              </button>
+            </span></label
+          >
+          <label class="input-with-icon"
+            >Confirmar Nueva Contrasena
+            <span>
+              <input type="password" name="confirm_password" placeholder="Repite la nueva clave" />
+              <button type="button" class="toggle-secret" title="Mostrar contrasena">
+                <i class="fas fa-eye"></i>
+              </button>
+            </span></label
+          >
+          <div class="form-actions">
+            <button class="btn red outline" type="button" onclick="closeProfileModal('passwordModal')">
+              Cancelar</button
+            ><button class="btn teal" type="submit">
+              <i class="fas fa-save"></i> Cambiar Contrasena
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
     <div id="toast" class="toast"></div>
     <div id="confirmModal" class="modal-backdrop">

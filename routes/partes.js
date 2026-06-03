@@ -1,13 +1,32 @@
 const express = require("express");
 const db = require("../db");
+const { canAccess } = require("../middleware/auth");
 
 const router = express.Router();
 
+/** Permite modificar partes solo a Administrador y Capturista. */
+function requirePartesWrite(req, res, next) {
+  if (!canAccess(req.user, ["Administrador", "Capturista"])) {
+    return res.status(403).json({ success: false, error: "No tienes permiso para modificar partes" });
+  }
+  return next();
+}
+
+/** Permite registrar exportaciones a roles autorizados para exportar. */
+function requirePartesExport(req, res, next) {
+  if (!canAccess(req.user, ["Administrador", "Capturista", "Auxiliar"])) {
+    return res.status(403).json({ success: false, error: "No tienes permiso para exportar partes" });
+  }
+  return next();
+}
+
+/** Convierte cadenas vacias o valores indefinidos a NULL para la base de datos. */
 function nullable(value) {
   const clean = typeof value === "string" ? value.trim() : value;
   return clean === "" || clean === undefined ? null : clean;
 }
 
+/** Busca un MP/respondiente por nombre o lo crea si todavia no existe. */
 async function findOrCreate(table, idColumn, nombre) {
   const clean = nullable(nombre);
   if (!clean) return null;
@@ -19,6 +38,7 @@ async function findOrCreate(table, idColumn, nombre) {
   return result.insertId;
 }
 
+/** Obtiene un parte completo con MP, respondiente, encargado, personas y vehiculos. */
 async function getPartById(id) {
   const [rows] = await db.query(
     `SELECT
@@ -66,6 +86,7 @@ async function getPartById(id) {
   return parte;
 }
 
+// Lista partes resumidos para tablas, tarjetas, inicio y modal de exportacion.
 router.get("/", async (req, res) => {
   const q = `%${(req.query.q || "").trim()}%`;
   const hasSearch = q !== "%%";
@@ -100,7 +121,16 @@ router.get("/", async (req, res) => {
   res.json({ success: true, data: rows });
 });
 
-router.post("/export", async (req, res) => {
+// Devuelve MP y respondientes activos para los campos buscables del formulario.
+router.get("/catalogos", async (req, res) => {
+  const [mps] = await db.query("SELECT id_mp, nombre FROM ministerios_publicos WHERE activo = 1 ORDER BY nombre");
+  const [respondientes] = await db.query("SELECT id_respondiente, nombre FROM respondientes WHERE activo = 1 ORDER BY nombre");
+
+  res.json({ success: true, data: { mps, respondientes } });
+});
+
+// Registra en historial que un usuario exporto partes.
+router.post("/export", requirePartesExport, async (req, res) => {
   const total = Number(req.body.total || 0);
   const tipo = String(req.body.tipo || "archivo").toUpperCase();
   await db.query("INSERT INTO historial_cambios (id_parte, id_usuario, accion, descripcion) VALUES (NULL, ?, 'EXPORTAR', ?)", [
@@ -110,13 +140,15 @@ router.post("/export", async (req, res) => {
   res.json({ success: true, message: "Exportacion registrada" });
 });
 
+// Devuelve un parte completo por id para ver o editar.
 router.get("/:id", async (req, res) => {
   const parte = await getPartById(req.params.id);
   if (!parte) return res.status(404).json({ success: false, error: "Parte no encontrado" });
   res.json({ success: true, data: parte });
 });
 
-router.post("/", async (req, res) => {
+// Crea un parte, sus detalles y el registro de historial.
+router.post("/", requirePartesWrite, async (req, res) => {
   const data = req.body;
   const folio = nullable(data.folio) || `FIG-${Date.now()}`;
   const idMp = await findOrCreate("ministerios_publicos", "id_mp", data.mp_nombre);
@@ -149,7 +181,8 @@ router.post("/", async (req, res) => {
   res.json({ success: true, message: "Parte creado", id: idParte });
 });
 
-router.put("/:id", async (req, res) => {
+// Actualiza un parte existente y registra el cambio en historial.
+router.put("/:id", requirePartesWrite, async (req, res) => {
   const data = req.body;
   const idParte = req.params.id;
   const idMp = await findOrCreate("ministerios_publicos", "id_mp", data.mp_nombre);
@@ -182,7 +215,8 @@ router.put("/:id", async (req, res) => {
   res.json({ success: true, message: "Parte actualizado" });
 });
 
-router.delete("/:id", async (req, res) => {
+// Elimina un parte despues de guardar el movimiento en historial.
+router.delete("/:id", requirePartesWrite, async (req, res) => {
   const parte = await getPartById(req.params.id);
   await db.query("INSERT INTO historial_cambios (id_parte, id_usuario, accion, descripcion) VALUES (?, ?, 'ELIMINAR', ?)", [
     req.params.id,
@@ -193,6 +227,7 @@ router.delete("/:id", async (req, res) => {
   res.json({ success: true, message: "Parte eliminado" });
 });
 
+/** Inserta o actualiza vehiculos y personas involucradas de un parte. */
 async function upsertDetails(idParte, data) {
   const vehiculos = normalizeVehicles(data);
   await db.query("DELETE FROM vehiculos WHERE id_parte = ?", [idParte]);
@@ -244,6 +279,7 @@ async function upsertDetails(idParte, data) {
   }
 }
 
+/** Normaliza los vehiculos recibidos desde JSON o desde campos antiguos del formulario. */
 function normalizeVehicles(data) {
   let vehiculos = [];
   if (Array.isArray(data.vehiculos)) vehiculos = data.vehiculos;

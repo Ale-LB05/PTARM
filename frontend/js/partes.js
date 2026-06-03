@@ -4,6 +4,7 @@ let partes = [];
 let editingId = null;
 let viewMode = localStorage.getItem("partesViewMode") || "list";
 let vehicleIndex = 0;
+let partesPage = 1;
 
 const partesRows = document.getElementById("partesRows");
 const partesListView = document.getElementById("partesListView");
@@ -19,11 +20,25 @@ const vehiclePersonSelect = document.getElementById("vehiclePersonSelect");
 const listViewBtn = document.getElementById("listViewBtn");
 const gridViewBtn = document.getElementById("gridViewBtn");
 const partDetailBody = document.getElementById("partDetailBody");
+const partesPageSize = document.getElementById("partesPageSize");
+const partesPrevPage = document.getElementById("partesPrevPage");
+const partesNextPage = document.getElementById("partesNextPage");
+const partesPageInfo = document.getElementById("partesPageInfo");
+const mpOptions = document.getElementById("mpOptions");
+const respondienteOptions = document.getElementById("respondienteOptions");
+const complementQuestions = document.getElementById("complementQuestions");
+const canWritePartes = hasRole("administrador", "capturista");
+const canExportPartes = hasRole("administrador", "capturista", "auxiliar");
+const mpInput = parteForm.elements.mp_nombre;
+const respondienteInput = parteForm.elements.respondiente_nombre;
+let catalogsLoaded = false;
 
+/** Cierra cualquier modal por su id. */
 function closeModal(id) {
   document.getElementById(id).classList.remove("show");
 }
 
+/** Carga los partes desde la API aplicando el buscador principal. */
 async function loadPartes() {
   const data = await api(`/api/partes?q=${encodeURIComponent(partSearch.value || "")}`);
   if (!data || !data.success) {
@@ -31,9 +46,21 @@ async function loadPartes() {
     return;
   }
   partes = data.data;
+  partesPage = 1;
   renderPartes();
 }
 
+/** Carga MP y respondientes desde base de datos para los campos buscables. */
+async function loadPartCatalogs(force = false) {
+  if (catalogsLoaded && !force) return;
+  const data = await api("/api/partes/catalogos");
+  if (!data?.success) return;
+  mpOptions.innerHTML = data.data.mps.map((mp) => `<option value="${escapeAttr(mp.nombre)}"></option>`).join("");
+  respondienteOptions.innerHTML = data.data.respondientes.map((respondiente) => `<option value="${escapeAttr(respondiente.nombre)}"></option>`).join("");
+  catalogsLoaded = true;
+}
+
+/** Llena el select de usuarios que pueden quedar como encargados del parte. */
 async function loadUsersSelect() {
   const data = await api("/api/usuarios");
   const select = document.getElementById("asignadoSelect");
@@ -45,19 +72,22 @@ async function loadUsersSelect() {
   }
 }
 
+/** Pinta la tabla y las tarjetas de partes segun pagina y modo de vista. */
 function renderPartes() {
-  partesRows.innerHTML = partes.map((parte) => `
+  const visible = pagedPartes();
+
+  partesRows.innerHTML = visible.map((parte) => `
     <tr>
       <td>${parte.folio || ""}</td>
       <td>${parte.respondiente_nombre || "Parte de transito"}</td>
       <td>${formatDate(parte.fecha)}</td>
       <td>${parte.mp_nombre || "Sin MP"}</td>
       <td><span class="person-cell"><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${parte.encargado_nombre || "Sin asignar"}</span></td>
-      <td><span class="actions"><button class="icon-btn edit" onclick="openParteModal('edit', ${parte.id_parte})"><i class="fas fa-edit"></i></button><button class="icon-btn delete" onclick="deleteParte(${parte.id_parte})"><i class="fas fa-trash"></i></button><button class="icon-btn view" onclick="openParteModal('view', ${parte.id_parte})"><i class="fas fa-eye"></i></button></span></td>
+      <td>${renderParteActions(parte)}</td>
     </tr>
   `).join("") || `<tr><td colspan="6">Aun no hay partes registrados.</td></tr>`;
 
-  partesGridView.innerHTML = partes.map((parte) => `
+  partesGridView.innerHTML = visible.map((parte) => `
     <article class="parte-card">
       <div>
         <span class="parte-folio">${parte.folio || "Sin folio"}</span>
@@ -68,20 +98,56 @@ function renderPartes() {
       <p><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${parte.encargado_nombre || "Sin asignar"}</p>
       <p><i class="fas fa-circle"></i> ${parte.estado || "Sin estado"}</p>
       <div class="card-actions">
-        <button class="icon-btn edit" onclick="openParteModal('edit', ${parte.id_parte})"><i class="fas fa-edit"></i></button>
-        <button class="icon-btn delete" onclick="deleteParte(${parte.id_parte})"><i class="fas fa-trash"></i></button>
+        ${canWritePartes ? `<button class="icon-btn edit" onclick="openParteModal('edit', ${parte.id_parte})"><i class="fas fa-edit"></i></button>
+        <button class="icon-btn delete" onclick="deleteParte(${parte.id_parte})"><i class="fas fa-trash"></i></button>` : ""}
         <button class="icon-btn view" onclick="openParteModal('view', ${parte.id_parte})"><i class="fas fa-eye"></i></button>
       </div>
     </article>
   `).join("") || `<p class="empty-state">Aun no hay partes registrados.</p>`;
 
+  renderPartesPageControls();
   applyViewMode();
 }
 
+/** Genera los botones permitidos para editar, eliminar o visualizar un parte. */
+function renderParteActions(parte) {
+  return `
+    <span class="actions">
+      ${canWritePartes ? `<button class="icon-btn edit" onclick="openParteModal('edit', ${parte.id_parte})"><i class="fas fa-edit"></i></button><button class="icon-btn delete" onclick="deleteParte(${parte.id_parte})"><i class="fas fa-trash"></i></button>` : ""}
+      <button class="icon-btn view" onclick="openParteModal('view', ${parte.id_parte})"><i class="fas fa-eye"></i></button>
+    </span>
+  `;
+}
+
+/** Devuelve solo los partes visibles segun paginacion actual. */
+function pagedPartes() {
+  const pageSize = Number(partesPageSize.value || 5);
+  const totalPages = Math.max(1, Math.ceil(partes.length / pageSize));
+  partesPage = Math.min(Math.max(partesPage, 1), totalPages);
+  const start = (partesPage - 1) * pageSize;
+  return partes.slice(start, start + pageSize);
+}
+
+/** Actualiza texto y estado de botones de paginacion de partes. */
+function renderPartesPageControls() {
+  const pageSize = Number(partesPageSize.value || 5);
+  const totalPages = Math.max(1, Math.ceil(partes.length / pageSize));
+  partesPageInfo.textContent = `Pagina ${partesPage} de ${totalPages}`;
+  partesPrevPage.disabled = partesPage <= 1;
+  partesNextPage.disabled = partesPage >= totalPages;
+}
+
+/** Abre el modal de parte en modo crear, editar o ver. */
 async function openParteModal(mode, id = null) {
+  if (mode !== "view" && !canWritePartes) {
+    showToast("No tienes permiso para modificar partes", "error");
+    return;
+  }
   await loadUsersSelect();
+  await loadPartCatalogs(true);
   parteForm.reset();
   resetVehicles();
+  updateComplementQuestions();
   editingId = id;
   const title = document.getElementById("parteModalTitle");
   const submit = document.getElementById("parteSubmit");
@@ -97,6 +163,7 @@ async function openParteModal(mode, id = null) {
   document.getElementById("parteModal").classList.add("show");
 }
 
+/** Bloquea o habilita campos del formulario cuando se visualiza un parte. */
 function setParteFormMode(mode) {
   const isView = mode === "view";
   document.getElementById("parteSubmit").style.display = isView ? "none" : "";
@@ -110,6 +177,7 @@ function setParteFormMode(mode) {
   vehiclesWrap.classList.toggle("view-only", isView);
 }
 
+/** Llena el formulario con la informacion de un parte existente. */
 function fillForm(parte) {
   Object.entries(parte).forEach(([key, value]) => {
     const el = parteForm.elements[key];
@@ -120,6 +188,7 @@ function fillForm(parte) {
   });
   resetVehicles(parte.vehiculos?.length ? parte.vehiculos : [parte]);
   vehiclePersonSelect.value = parte.id_vehiculo || "";
+  updateComplementQuestions();
 }
 
 parteForm.addEventListener("submit", async (event) => {
@@ -135,6 +204,11 @@ parteForm.addEventListener("submit", async (event) => {
   payload.personas_fallecidas = parteForm.personas_fallecidas.checked;
   payload.personas_heridas = parteForm.personas_heridas.checked;
   payload.otros = parteForm.otros.checked;
+  if (!payload.personas_heridas) {
+    payload.numero_heridos = "";
+    payload.gravedad = "";
+  }
+  payload.observaciones = buildComplementNotes(payload);
   const path = editingId ? `/api/partes/${editingId}` : "/api/partes";
   const method = editingId ? "PUT" : "POST";
   const data = await api(path, { method, body: JSON.stringify(payload) });
@@ -147,7 +221,12 @@ parteForm.addEventListener("submit", async (event) => {
   }
 });
 
+/** Elimina un parte tras confirmacion y recarga la lista. */
 function deleteParte(id) {
+  if (!canWritePartes) {
+    showToast("No tienes permiso para eliminar partes", "error");
+    return;
+  }
   showConfirm("Eliminar parte", "Esta accion eliminara el parte seleccionado. Deseas continuar?", async () => {
     const data = await api(`/api/partes/${id}`, { method: "DELETE" });
     if (data?.success) {
@@ -159,13 +238,19 @@ function deleteParte(id) {
   });
 }
 
+/** Abre el modal de exportacion si el rol tiene permiso. */
 function openExport() {
+  if (!canExportPartes) {
+    showToast("No tienes permiso para exportar partes", "error");
+    return;
+  }
   exportSearch.value = "";
   exportSelectAll.checked = false;
   renderExportRows();
   document.getElementById("exportModal").classList.add("show");
 }
 
+/** Pinta las filas seleccionables dentro del modal de exportacion. */
 function renderExportRows() {
   const q = exportSearch.value.trim().toLowerCase();
   const filtered = partes.filter((parte) => {
@@ -183,7 +268,7 @@ function renderExportRows() {
             <td>${formatDate(parte.fecha)}</td>
             <td>${parte.mp_nombre || "Sin MP"}</td>
             <td><span class="person-cell"><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${parte.encargado_nombre || "Sin asignar"}</span></td>
-            <td><input class="export-check" type="checkbox" value="${parte.id_parte}" ${exportSelectAll.checked ? "checked" : ""} /></td>
+            <td class="export-select-cell"><input class="export-check" type="checkbox" value="${parte.id_parte}" ${exportSelectAll.checked ? "checked" : ""} /></td>
           </tr>
         `,
       )
@@ -191,11 +276,13 @@ function renderExportRows() {
   updateExportCount();
 }
 
+/** Obtiene los partes marcados para exportar. */
 function selectedExportPartes() {
   const selected = [...document.querySelectorAll(".export-check:checked")].map((input) => Number(input.value));
   return partes.filter((parte) => selected.includes(Number(parte.id_parte)));
 }
 
+/** Exporta los partes seleccionados en PDF imprimible o Excel. */
 async function exportPartes(type) {
   const selected = selectedExportPartes();
   if (!selected.length) {
@@ -225,6 +312,7 @@ async function exportPartes(type) {
   });
 }
 
+/** Solicita a la API los datos completos de cada parte seleccionado. */
 async function loadDetailedParts(rows) {
   const detailed = [];
   for (const row of rows) {
@@ -234,11 +322,12 @@ async function loadDetailedParts(rows) {
   return detailed;
 }
 
+/** Decide el tipo de archivo que se descargara segun la opcion elegida. */
 function downloadExport(type, rows) {
   const stamp = new Date().toISOString().slice(0, 10);
   if (type === "excel") {
-    const csv = toCsv(rows);
-    downloadBlob(csv, `partes-${stamp}.csv`, "text/csv;charset=utf-8");
+    const workbook = excelHtml(rows);
+    downloadBlob(workbook, `partes-${stamp}.xls`, "application/vnd.ms-excel;charset=utf-8");
     return;
   }
 
@@ -246,11 +335,13 @@ function downloadExport(type, rows) {
   openPrintableExport(html, `partes-${stamp}.html`);
 }
 
+/** Actualiza el contador de partes seleccionados para exportar. */
 function updateExportCount() {
   const total = document.querySelectorAll(".export-check:checked").length;
   exportCount.textContent = `${total} seleccionado${total === 1 ? "" : "s"}`;
 }
 
+/** Construye el HTML imprimible usado para exportar en PDF. */
 function exportHtml(rows) {
   const generatedAt = new Date().toLocaleString("es-MX");
   return `
@@ -261,12 +352,14 @@ function exportHtml(rows) {
         <title>Partes exportados</title>
         <style>
           *{box-sizing:border-box}
+          @page{margin:14mm}
+          html,body{min-height:0}
           body{margin:0;background:#f4f6fb;color:#172033;font-family:Arial,sans-serif}
           .sheet{max-width:1020px;margin:0 auto;padding:28px}
           .doc-header{border-bottom:4px solid #06145f;padding:18px 0 14px;margin-bottom:22px}
           .doc-header h1{margin:0;color:#06145f;font-size:26px}
           .doc-header p{margin:6px 0 0;color:#667085}
-          .export-part{page-break-inside:avoid;margin:0 0 24px;border:1px solid #d9dde8;border-radius:12px;background:#fff;overflow:hidden}
+          .export-part{break-inside:auto;page-break-inside:auto;margin:0 0 24px;border:1px solid #d9dde8;border-radius:12px;background:#fff;overflow:hidden}
           .part-title{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:16px 20px;color:#fff;background:#06145f}
           .part-title h2{margin:0;font-size:18px}
           .part-title span{font-size:12px;opacity:.9}
@@ -280,7 +373,7 @@ function exportHtml(rows) {
           table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
           th,td{border:1px solid #e5e7ef;padding:8px;text-align:left;vertical-align:top}
           th{color:#06145f;background:#f4f6fb}
-          @media print{body{background:#fff}.sheet{padding:0}.export-part{page-break-inside:avoid}}
+          @media print{body{background:#fff}.sheet{padding:0}.export-part{break-inside:auto;page-break-inside:auto}.export-part:last-child{margin-bottom:0}}
         </style>
       </head>
       <body>
@@ -297,6 +390,7 @@ function exportHtml(rows) {
   `;
 }
 
+/** Construye la seccion individual de un parte dentro del PDF. */
 function exportPartSection(parte) {
   return `
     <section class="export-part">
@@ -353,68 +447,87 @@ function exportPartSection(parte) {
   `;
 }
 
+/** Devuelve un campo de exportacion con etiqueta y valor seguro. */
 function exportField(label, value) {
   return `<div class="field"><b>${escapeHtml(label)}</b><span>${fieldHtml(value)}</span></div>`;
 }
 
-function toCsv(rows) {
-  const header = [
-    "ID",
-    "Fecha de creacion",
-    "ID MP",
-    "ID respondiente",
-    "ID usuario creador",
-    "ID usuario encargado",
-    "Folio",
-    "Fecha",
-    "Hora",
-    "Estado",
-    "Gravedad general",
-    "Respondiente",
-    "MP asignado",
-    "Usuario encargado",
-    "Numero de personas",
-    "Vehiculo asociado",
-    "Personas fallecidas",
-    "Personas heridas",
-    "Otros",
-    "Numero de heridos",
-    "Gravedad personas",
-    "Observaciones",
-    "Vehiculos",
-  ];
-  const lines = rows.map((parte) => [
-    parte.id_parte,
-    formatDateTime(parte.fecha_creacion),
-    parte.id_mp,
-    parte.id_respondiente,
-    parte.creado_por,
-    parte.asignado_a,
-    parte.folio,
-    formatDate(parte.fecha),
-    parte.hora,
-    parte.estado,
-    parte.gravedad_general,
-    parte.respondiente_nombre,
-    parte.mp_nombre,
-    parte.encargado_nombre,
-    parte.numero_personas,
-    parte.id_vehiculo,
-    boolText(parte.personas_fallecidas),
-    boolText(parte.personas_heridas),
-    boolText(parte.otros),
-    parte.numero_heridos,
-    parte.gravedad,
-    parte.observaciones,
-    vehicleSummary(parte.vehiculos),
-  ].map(csvCell).join(","));
-  return [header.join(","), ...lines].join("\n");
+/** Construye un archivo HTML compatible con Excel con resumen y detalle. */
+function excelHtml(rows) {
+  return `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body{font-family:Arial,sans-serif}
+          h1{color:#06145f}
+          h2{margin-top:22px;color:#06145f}
+          table{border-collapse:collapse;width:100%;margin-bottom:18px}
+          th{background:#06145f;color:#fff;font-weight:700}
+          th,td{border:1px solid #b9c0d4;padding:8px;text-align:left;vertical-align:top}
+          .section{background:#eef2ff;color:#06145f;font-weight:700}
+        </style>
+      </head>
+      <body>
+        <h1>Partes de transito</h1>
+        <p>Total de partes: ${rows.length} | Generado: ${escapeHtml(new Date().toLocaleString("es-MX"))}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Folio</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Gravedad</th>
+              <th>Respondiente</th><th>MP asignado</th><th>Usuario encargado</th>
+              <th>Personas</th><th>Heridos</th><th>Observaciones</th><th>Vehiculos</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((parte) => `
+              <tr>
+                <td>${fieldHtml(parte.folio)}</td>
+                <td>${fieldHtml(formatDate(parte.fecha))}</td>
+                <td>${fieldHtml(parte.hora)}</td>
+                <td>${fieldHtml(parte.estado)}</td>
+                <td>${fieldHtml(parte.gravedad_general)}</td>
+                <td>${fieldHtml(parte.respondiente_nombre)}</td>
+                <td>${fieldHtml(parte.mp_nombre)}</td>
+                <td>${fieldHtml(parte.encargado_nombre)}</td>
+                <td>${fieldHtml(parte.numero_personas)}</td>
+                <td>${fieldHtml(parte.numero_heridos)}</td>
+                <td>${fieldHtml(parte.observaciones)}</td>
+                <td>${fieldHtml(vehicleSummary(parte.vehiculos))}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+        ${rows.map((parte) => `
+          <h2>${fieldHtml(parte.folio, "Parte sin folio")}</h2>
+          <table>
+            <tr><td class="section" colspan="2">Datos generales</td></tr>
+            <tr><th>Respondiente</th><td>${fieldHtml(parte.respondiente_nombre)}</td></tr>
+            <tr><th>MP asignado</th><td>${fieldHtml(parte.mp_nombre)}</td></tr>
+            <tr><th>Encargado</th><td>${fieldHtml(parte.encargado_nombre)}</td></tr>
+            <tr><th>Personas fallecidas</th><td>${fieldHtml(boolText(parte.personas_fallecidas))}</td></tr>
+            <tr><th>Personas heridas</th><td>${fieldHtml(boolText(parte.personas_heridas))}</td></tr>
+            <tr><th>Otros</th><td>${fieldHtml(boolText(parte.otros))}</td></tr>
+            <tr><th>Observaciones</th><td>${fieldHtml(parte.observaciones)}</td></tr>
+          </table>
+          <table>
+            <tr><td class="section" colspan="6">Vehiculos</td></tr>
+            <tr><th>#</th><th>Marca</th><th>Modelo</th><th>Tipo</th><th>No. Serie</th><th>No. Placa</th></tr>
+            ${renderVehicleRows(parte.vehiculos, true)}
+          </table>
+        `).join("")}
+      </body>
+    </html>
+  `;
 }
 
-function csvCell(value) {
-  return `"${textValue(value).replaceAll('"', '""')}"`;
+/** Oculta botones de crear/exportar segun permisos del rol actual. */
+function applyPartPermissions() {
+  document.getElementById("createParteBtn").hidden = !canWritePartes;
+  document.getElementById("openExportBtn").hidden = !canExportPartes;
 }
 
+/** Descarga texto o HTML como archivo usando un Blob temporal. */
 function downloadBlob(content, filename, type) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -427,6 +540,7 @@ function downloadBlob(content, filename, type) {
   URL.revokeObjectURL(url);
 }
 
+/** Abre el HTML imprimible en otra ventana o descarga si el navegador lo bloquea. */
 function openPrintableExport(html, fallbackName) {
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -439,6 +553,7 @@ function openPrintableExport(html, fallbackName) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
+/** Reinicia la lista de vehiculos del formulario. */
 function resetVehicles(vehicles = [{}]) {
   vehicleIndex = 0;
   vehiclesWrap.innerHTML = "";
@@ -447,6 +562,7 @@ function resetVehicles(vehicles = [{}]) {
   refreshVehicleSelect();
 }
 
+/** Agrega una tarjeta de vehiculo al formulario. */
 function addVehicle(vehicle = {}) {
   vehicleIndex += 1;
   const card = document.createElement("fieldset");
@@ -489,6 +605,7 @@ function addVehicle(vehicle = {}) {
   refreshVehicleSelect();
 }
 
+/** Recolecta los vehiculos escritos en el formulario. */
 function collectVehicles() {
   return [...vehiclesWrap.querySelectorAll(".vehicle-card")].map((card, index) => {
     const vehicle = { numero_vehiculo: index + 1 };
@@ -499,6 +616,7 @@ function collectVehicles() {
   }).filter((vehicle) => ["marca", "modelo", "tipo", "numero_serie", "numero_placa"].some((key) => vehicle[key]));
 }
 
+/** Actualiza el select de vehiculo asociado a personas involucradas. */
 function refreshVehicleSelect() {
   const current = vehiclePersonSelect.value;
   const options = [...vehiclesWrap.querySelectorAll(".vehicle-card")].map((card, index) => {
@@ -509,6 +627,7 @@ function refreshVehicleSelect() {
   vehiclePersonSelect.value = current;
 }
 
+/** Reenumera los vehiculos cuando se agregan o eliminan tarjetas. */
 function renumberVehicles() {
   [...vehiclesWrap.querySelectorAll(".vehicle-card")].forEach((card, index) => {
     card.dataset.vehicleIndex = String(index + 1);
@@ -517,6 +636,36 @@ function renumberVehicles() {
   });
 }
 
+/** Muestra las preguntas extra segun complementos seleccionados. */
+function updateComplementQuestions() {
+  if (!complementQuestions) return;
+  complementQuestions.querySelectorAll("[data-complement-panel]").forEach((panel) => {
+    const checkbox = parteForm.elements[panel.dataset.complementPanel];
+    panel.hidden = !checkbox?.checked;
+  });
+}
+
+/** Une en observaciones las respuestas extra de los complementos. */
+function buildComplementNotes(payload) {
+  const notes = [];
+  const base = textValue(payload.observaciones, "");
+  if (payload.otros && base) notes.push(base);
+  if (payload.personas_fallecidas && payload.numero_fallecidos) {
+    notes.push(`Personas fallecidas: ${payload.numero_fallecidos}`);
+  }
+  if (payload.personas_fallecidas && payload.observacion_fallecidos) {
+    notes.push(`Observacion de fallecidos: ${payload.observacion_fallecidos}`);
+  }
+  if (payload.personas_heridas && payload.numero_heridos) {
+    notes.push(`Personas heridas: ${payload.numero_heridos}`);
+  }
+  if (payload.personas_heridas && payload.gravedad) {
+    notes.push(`Gravedad de heridos: ${payload.gravedad}`);
+  }
+  return notes.join(" | ");
+}
+
+/** Aplica vista de lista o tarjetas en Gestionar partes. */
 function applyViewMode() {
   const grid = viewMode === "grid";
   partesListView.hidden = grid;
@@ -525,12 +674,14 @@ function applyViewMode() {
   gridViewBtn.classList.toggle("active", grid);
 }
 
+/** Cambia y guarda la vista preferida de Gestionar partes. */
 function setViewMode(mode) {
   viewMode = mode;
   localStorage.setItem("partesViewMode", mode);
   applyViewMode();
 }
 
+/** Evita ejecutar una funcion demasiadas veces durante escritura. */
 function debounce(fn, wait = 250) {
   let timeout;
   return (...args) => {
@@ -539,12 +690,14 @@ function debounce(fn, wait = 250) {
   };
 }
 
+/** Pinta filas de vehiculos para pantalla o exportacion. */
 function renderVehicleRows(vehicles = [], forExport = false) {
   return vehicles.length
     ? vehicles.map((vehicle, index) => `<tr><td>${index + 1}</td><td>${forExport ? fieldHtml(vehicle.marca) : vehicle.marca || ""}</td><td>${forExport ? fieldHtml(vehicle.modelo) : vehicle.modelo || ""}</td><td>${forExport ? fieldHtml(vehicle.tipo) : vehicle.tipo || ""}</td><td>${forExport ? fieldHtml(vehicle.numero_serie) : vehicle.numero_serie || ""}</td><td>${forExport ? fieldHtml(vehicle.numero_placa) : vehicle.numero_placa || ""}</td></tr>`).join("")
     : `<tr><td colspan="6">${forExport ? fieldHtml("") : "Sin vehiculos registrados."}</td></tr>`;
 }
 
+/** Resume todos los vehiculos en una sola cadena para Excel. */
 function vehicleSummary(vehicles = []) {
   return vehicles.length
     ? vehicles.map((vehicle, index) => `Carro ${index + 1}: ${[
@@ -557,15 +710,18 @@ function vehicleSummary(vehicles = []) {
     : "Campo vacio";
 }
 
+/** Escapa texto para usarlo dentro de atributos HTML. */
 function escapeAttr(value = "") {
   return String(value || "").replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
 }
 
+/** Formatea una fecha conservando solo yyyy-mm-dd. */
 function formatDate(value) {
   if (!value) return "";
   return String(value).slice(0, 10);
 }
 
+/** Formatea fecha y hora para mostrar/exportar. */
 function formatDateTime(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -573,11 +729,13 @@ function formatDateTime(value) {
   return date.toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" });
 }
 
+/** Convierte valores vacios en un texto de respaldo. */
 function textValue(value, fallback = "Campo vacio") {
   const clean = value === undefined || value === null ? "" : String(value).trim();
   return clean || fallback;
 }
 
+/** Convierte un valor en HTML seguro y marca campos vacios. */
 function fieldHtml(value, fallback = "Campo vacio") {
   const text = textValue(value, fallback);
   return text === "Campo vacio"
@@ -585,11 +743,13 @@ function fieldHtml(value, fallback = "Campo vacio") {
     : escapeHtml(text);
 }
 
+/** Convierte booleanos o banderas numericas en Si/No. */
 function boolText(value) {
   if (value === undefined || value === null || value === "") return "Campo vacio";
   return Number(value) || value === true || value === "true" ? "Si" : "No";
 }
 
+/** Escapa texto para insertarlo como contenido HTML seguro. */
 function escapeHtml(value = "") {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -602,8 +762,34 @@ function escapeHtml(value = "") {
 partSearch.addEventListener("input", debounce(loadPartes));
 listViewBtn.addEventListener("click", () => setViewMode("list"));
 gridViewBtn.addEventListener("click", () => setViewMode("grid"));
+partesPageSize.addEventListener("change", () => {
+  partesPage = 1;
+  renderPartes();
+});
+partesPrevPage.addEventListener("click", () => {
+  partesPage -= 1;
+  renderPartes();
+});
+partesNextPage.addEventListener("click", () => {
+  partesPage += 1;
+  renderPartes();
+});
 document.getElementById("addVehicleBtn").addEventListener("click", () => addVehicle());
 vehiclesWrap.addEventListener("input", refreshVehicleSelect);
+["personas_fallecidas", "personas_heridas", "otros"].forEach((name) => {
+  parteForm.elements[name].addEventListener("change", updateComplementQuestions);
+});
+[mpInput, respondienteInput].forEach((input) => {
+  input.addEventListener("focus", () => loadPartCatalogs(true));
+  input.addEventListener("click", () => {
+    loadPartCatalogs(true);
+    try {
+      input.showPicker?.();
+    } catch {
+      // Algunos navegadores no abren datalist programaticamente.
+    }
+  });
+});
 
 exportSearch.addEventListener("input", renderExportRows);
 exportSelectAll.addEventListener("change", renderExportRows);
@@ -612,5 +798,8 @@ exportRows.addEventListener("change", (event) => {
 });
 
 resetVehicles();
+updateComplementQuestions();
 applyViewMode();
+applyPartPermissions();
+loadPartCatalogs();
 loadPartes();

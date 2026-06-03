@@ -1,8 +1,11 @@
 const express = require("express");
 const db = require("../db");
+const { requireRole } = require("../middleware/auth");
 
 const router = express.Router();
+router.use(requireRole("Administrador", "Capturista", "Auxiliar"));
 
+// Lista movimientos del historial con filtros por accion, folio, usuario, MP o fecha.
 router.get("/", async (req, res) => {
   const accion = (req.query.accion || "").trim().toUpperCase();
   const q = `%${(req.query.q || "").trim()}%`;
@@ -31,11 +34,14 @@ router.get("/", async (req, res) => {
        p.folio,
        p.hora AS parte_hora,
        mp.nombre AS mp_nombre,
+       encargado.nombre AS encargado_nombre,
+       encargado.imagen_perfil AS encargado_foto,
        u.nombre AS usuario_nombre,
        u.imagen_perfil AS usuario_foto
      FROM historial_cambios h
      LEFT JOIN partes p ON p.id_parte = h.id_parte
      LEFT JOIN ministerios_publicos mp ON mp.id_mp = p.id_mp
+     LEFT JOIN usuarios encargado ON encargado.id_usuario = p.asignado_a
      LEFT JOIN usuarios u ON u.id_usuario = h.id_usuario
      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
      ORDER BY h.fecha DESC, h.id_historial DESC

@@ -10,6 +10,7 @@ const homePageInfo = document.getElementById("homePageInfo");
 let homePartes = [];
 let homePage = 1;
 
+/** Carga los partes que se muestran en el inicio aplicando el buscador. */
 async function loadHome() {
   const data = await api(`/api/partes?q=${encodeURIComponent(homeSearch.value || "")}`);
   if (!data || !data.success) {
@@ -21,6 +22,7 @@ async function loadHome() {
   renderHomePage();
 }
 
+/** Pinta la pagina actual de partes en el inicio y actualiza paginacion. */
 function renderHomePage() {
   const pageSize = Number(homePageSize.value || 5);
   const totalPages = Math.max(1, Math.ceil(homePartes.length / pageSize));
@@ -42,6 +44,7 @@ function renderHomePage() {
   homeNextPage.disabled = homePage >= totalPages;
 }
 
+/** Formatea una fecha conservando solo yyyy-mm-dd. */
 function formatDate(value) {
   if (!value) return "";
   return String(value).slice(0, 10);

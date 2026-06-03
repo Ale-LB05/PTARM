@@ -1,6 +1,7 @@
 const loginForm = document.getElementById("loginForm");
 const setupForm = document.getElementById("setupForm");
 
+/** Alterna entre mostrar y ocultar un campo de contrasena. */
 function togglePassword(button) {
   const input = button.parentElement.querySelector("input");
   const icon = button.querySelector("i");
@@ -9,6 +10,7 @@ function togglePassword(button) {
   icon.classList.toggle("fa-eye-slash");
 }
 
+/** Revisa si ya existe un usuario para decidir entre login y setup inicial. */
 async function checkStatus() {
   const res = await fetch("/api/auth/status");
   const data = await res.json();
@@ -22,6 +24,7 @@ async function checkStatus() {
 
 if (loginForm) {
   checkStatus();
+  // Inicia sesion, guarda token/usuario en localStorage y entra al sistema.
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(loginForm));
@@ -45,6 +48,7 @@ if (loginForm) {
 
 if (setupForm) {
   checkStatus();
+  // Crea el primer administrador cuando la base todavia no tiene usuarios.
   setupForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(setupForm));
@@ -64,6 +68,7 @@ if (setupForm) {
   });
 }
 
+/** Muestra alertas del login usando SweetAlert cuando esta disponible. */
 function showAuthAlert(title, text, icon, onClose) {
   if (window.Swal) {
     Swal.fire({

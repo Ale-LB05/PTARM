@@ -3,8 +3,17 @@ setupLayout("perfil");
 const form = document.getElementById("profileForm");
 const photo = document.getElementById("profilePhoto");
 const rows = document.getElementById("profilePartes");
+const profileName = document.getElementById("profileName");
+const profileEmail = document.getElementById("profileEmail");
+const profileCargo = document.getElementById("profileCargo");
+const profileInstitute = document.getElementById("profileInstitute");
+const emailForm = document.getElementById("emailForm");
+const passwordForm = document.getElementById("passwordForm");
+const openEmailModal = document.getElementById("openEmailModal");
+const openPasswordModal = document.getElementById("openPasswordModal");
 const defaultPhoto = "/img/usuario.png";
 
+/** Carga la informacion del perfil y los partes relacionados con el usuario. */
 async function loadProfile() {
   const data = await api("/api/perfil");
   if (!data?.success) {
@@ -12,10 +21,11 @@ async function loadProfile() {
     return;
   }
   const user = data.data.usuario;
-  form.nombre.value = user.nombre || "";
-  form.correo.value = user.correo || "";
-  form.instituto.value = user.instituto || "";
-  form.cargo_grado.value = user.cargo_grado || "";
+  profileName.textContent = user.nombre || "Sin nombre";
+  profileEmail.textContent = user.correo || "Sin correo registrado";
+  profileCargo.textContent = user.cargo_grado || "Sin cargo";
+  profileInstitute.textContent = user.instituto || "Sin institucion";
+  emailForm.correo.value = user.correo || "";
   photo.src = user.imagen_perfil || defaultPhoto;
   updateStoredUser({
     nombre: user.nombre || "",
@@ -30,43 +40,71 @@ async function loadProfile() {
   `).join("") || `<tr><td colspan="5">Aun no hay partes creados o asignados.</td></tr>`;
 }
 
-form.imagen.addEventListener("change", () => {
-  const file = form.imagen.files[0];
-  if (!file) return;
-  const previewUrl = URL.createObjectURL(file);
-  photo.src = previewUrl;
-  document.querySelectorAll("[data-user-photo]").forEach((img) => {
-    img.src = previewUrl;
-  });
+/** Cierra uno de los modales del perfil por su id. */
+function closeProfileModal(id) {
+  document.getElementById(id).classList.remove("show");
+}
+
+// Abre el modal para actualizar solo el correo del usuario.
+openEmailModal.addEventListener("click", () => {
+  emailForm.correo.value = profileEmail.textContent === "Sin correo registrado" ? "" : profileEmail.textContent;
+  document.getElementById("emailModal").classList.add("show");
 });
 
-form.addEventListener("submit", async (event) => {
+// Abre el modal para cambiar solo la contrasena del usuario.
+openPasswordModal.addEventListener("click", () => {
+  passwordForm.reset();
+  document.getElementById("passwordModal").classList.add("show");
+});
+
+// Guarda el nuevo correo en la API y actualiza los datos locales del encabezado.
+emailForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const body = new FormData(form);
-  const data = await api("/api/perfil", { method: "POST", body });
+  const correo = emailForm.correo.value.trim();
+  const data = await api("/api/perfil/correo", { method: "PATCH", body: JSON.stringify({ correo }) });
   if (data?.success) {
-    const updatedUser = data.usuario || {
-      nombre: form.nombre.value,
-      correo: form.correo.value,
-      instituto: form.instituto.value,
-      cargo: form.cargo_grado.value,
-      foto: defaultPhoto,
-    };
-    updateStoredUser(updatedUser);
-    photo.src = updatedUser.foto || defaultPhoto;
-    showToast("Perfil actualizado");
-    loadProfile();
+    profileEmail.textContent = correo;
+    updateStoredUser({ correo });
+    closeProfileModal("emailModal");
+    showToast(data.message || "Correo actualizado");
   } else {
-    showToast(data?.error || "No se pudo actualizar el perfil", "error");
+    showToast(data?.error || "No se pudo actualizar el correo", "error");
   }
 });
 
+// Envia el cambio de contrasena despues de validar los campos en backend.
+passwordForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const payload = Object.fromEntries(new FormData(passwordForm));
+  const data = await api("/api/perfil/password", { method: "PATCH", body: JSON.stringify(payload) });
+  if (data?.success) {
+    passwordForm.reset();
+    closeProfileModal("passwordModal");
+    showToast(data.message || "Contrasena actualizada");
+  } else {
+    showToast(data?.error || "No se pudo actualizar la contrasena", "error");
+  }
+});
+
+// Permite mostrar u ocultar temporalmente los campos de contrasena.
+document.querySelectorAll(".toggle-secret").forEach((button) => {
+  button.addEventListener("click", () => {
+    const input = button.parentElement.querySelector("input");
+    input.type = input.type === "password" ? "text" : "password";
+    button.querySelector("i").classList.toggle("fa-eye");
+    button.querySelector("i").classList.toggle("fa-eye-slash");
+  });
+});
+
+form.addEventListener("submit", (event) => event.preventDefault());
+
+/** Sincroniza localStorage y la barra superior con los cambios del perfil. */
 function updateStoredUser(changes) {
   const current = getUser();
   const updated = {
     ...current,
     ...changes,
-    foto: changes.foto || changes.imagen_perfil || defaultPhoto,
+    foto: changes.foto || changes.imagen_perfil || current.foto || defaultPhoto,
   };
   localStorage.setItem("usuario", JSON.stringify(updated));
   document.querySelectorAll("[data-user-name]").forEach((el) => {
@@ -80,6 +118,7 @@ function updateStoredUser(changes) {
   });
 }
 
+/** Formatea una fecha conservando solo yyyy-mm-dd. */
 function formatDate(value) {
   if (!value) return "";
   return String(value).slice(0, 10);
