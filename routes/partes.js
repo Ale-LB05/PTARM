@@ -3,6 +3,21 @@ const db = require("../db");
 const { canAccess } = require("../middleware/auth");
 
 const router = express.Router();
+let peopleExtraColumnsReady = false;
+
+/** Asegura columnas para guardar datos especificos de fallecidos en bases existentes. */
+async function ensurePeopleExtraColumns() {
+  if (peopleExtraColumnsReady) return;
+  const [columns] = await db.query("SHOW COLUMNS FROM personas_involucradas");
+  const names = new Set(columns.map((column) => column.Field));
+  if (!names.has("numero_fallecidos")) {
+    await db.query("ALTER TABLE personas_involucradas ADD COLUMN numero_fallecidos int(11) DEFAULT NULL AFTER personas_fallecidas");
+  }
+  if (!names.has("observacion_fallecidos")) {
+    await db.query("ALTER TABLE personas_involucradas ADD COLUMN observacion_fallecidos text DEFAULT NULL AFTER numero_fallecidos");
+  }
+  peopleExtraColumnsReady = true;
+}
 
 /** Permite modificar partes solo a Administrador y Capturista. */
 function requirePartesWrite(req, res, next) {
@@ -40,6 +55,7 @@ async function findOrCreate(table, idColumn, nombre) {
 
 /** Obtiene un parte completo con MP, respondiente, encargado, personas y vehiculos. */
 async function getPartById(id) {
+  await ensurePeopleExtraColumns();
   const [rows] = await db.query(
     `SELECT
        p.*,
@@ -49,6 +65,8 @@ async function getPartById(id) {
        u.imagen_perfil AS encargado_foto,
        pi.numero_personas,
        pi.personas_fallecidas,
+       pi.numero_fallecidos,
+       pi.observacion_fallecidos,
        pi.personas_heridas,
        pi.otros,
        pi.numero_heridos,
@@ -151,7 +169,7 @@ router.get("/:id", async (req, res) => {
 router.post("/", requirePartesWrite, async (req, res) => {
   const data = req.body;
   const folio = nullable(data.folio) || `FIG-${Date.now()}`;
-  const idMp = await findOrCreate("ministerios_publicos", "id_mp", data.mp_nombre);
+  const idMp = nullable(data.id_mp) || await findOrCreate("ministerios_publicos", "id_mp", data.mp_nombre);
   const idRespondiente = await findOrCreate("respondientes", "id_respondiente", data.respondiente_nombre);
 
   const [result] = await db.query(
@@ -185,15 +203,17 @@ router.post("/", requirePartesWrite, async (req, res) => {
 router.put("/:id", requirePartesWrite, async (req, res) => {
   const data = req.body;
   const idParte = req.params.id;
-  const idMp = await findOrCreate("ministerios_publicos", "id_mp", data.mp_nombre);
+  const currentParte = await getPartById(idParte);
+  const idMp = nullable(data.id_mp) || await findOrCreate("ministerios_publicos", "id_mp", data.mp_nombre);
   const idRespondiente = await findOrCreate("respondientes", "id_respondiente", data.respondiente_nombre);
+  const folio = nullable(data.folio) || currentParte?.folio || `FIG-${Date.now()}`;
 
   await db.query(
     `UPDATE partes
      SET folio = ?, fecha = ?, hora = ?, id_mp = ?, id_respondiente = ?, estado = ?, gravedad_general = ?, asignado_a = ?
      WHERE id_parte = ?`,
     [
-      nullable(data.folio) || `FIG-${Date.now()}`,
+      folio,
       nullable(data.fecha),
       nullable(data.hora),
       idMp,
@@ -209,7 +229,7 @@ router.put("/:id", requirePartesWrite, async (req, res) => {
   await db.query("INSERT INTO historial_cambios (id_parte, id_usuario, accion, descripcion) VALUES (?, ?, 'EDITAR', ?)", [
     idParte,
     req.user.id,
-    "Parte editado desde Node",
+    `Parte ${folio} editado desde Node | creado_por:${currentParte?.creado_por || ""}`,
   ]);
 
   res.json({ success: true, message: "Parte actualizado" });
@@ -221,7 +241,7 @@ router.delete("/:id", requirePartesWrite, async (req, res) => {
   await db.query("INSERT INTO historial_cambios (id_parte, id_usuario, accion, descripcion) VALUES (?, ?, 'ELIMINAR', ?)", [
     req.params.id,
     req.user.id,
-    `Parte ${parte?.folio || req.params.id} eliminado desde Node`,
+    `Parte ${parte?.folio || req.params.id} eliminado desde Node | creado_por:${parte?.creado_por || ""}`,
   ]);
   await db.query("DELETE FROM partes WHERE id_parte = ?", [req.params.id]);
   res.json({ success: true, message: "Parte eliminado" });
@@ -229,6 +249,7 @@ router.delete("/:id", requirePartesWrite, async (req, res) => {
 
 /** Inserta o actualiza vehiculos y personas involucradas de un parte. */
 async function upsertDetails(idParte, data) {
+  await ensurePeopleExtraColumns();
   const vehiculos = normalizeVehicles(data);
   await db.query("DELETE FROM vehiculos WHERE id_parte = ?", [idParte]);
 
@@ -255,6 +276,8 @@ async function upsertDetails(idParte, data) {
     idVehiculo,
     nullable(data.numero_personas),
     data.personas_fallecidas ? 1 : 0,
+    nullable(data.numero_fallecidos),
+    nullable(data.observacion_fallecidos),
     data.personas_heridas ? 1 : 0,
     data.otros ? 1 : 0,
     nullable(data.numero_heridos),
@@ -265,15 +288,15 @@ async function upsertDetails(idParte, data) {
   if (people[0]) {
     await db.query(
       `UPDATE personas_involucradas
-       SET id_vehiculo = ?, numero_personas = ?, personas_fallecidas = ?, personas_heridas = ?, otros = ?, numero_heridos = ?, gravedad = ?, observaciones = ?
+       SET id_vehiculo = ?, numero_personas = ?, personas_fallecidas = ?, numero_fallecidos = ?, observacion_fallecidos = ?, personas_heridas = ?, otros = ?, numero_heridos = ?, gravedad = ?, observaciones = ?
        WHERE id_personas_involucradas = ?`,
       [...payload, people[0].id_personas_involucradas],
     );
   } else {
     await db.query(
       `INSERT INTO personas_involucradas
-       (id_parte, id_vehiculo, numero_personas, personas_fallecidas, personas_heridas, otros, numero_heridos, gravedad, observaciones)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id_parte, id_vehiculo, numero_personas, personas_fallecidas, numero_fallecidos, observacion_fallecidos, personas_heridas, otros, numero_heridos, gravedad, observaciones)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [idParte, ...payload],
     );
   }

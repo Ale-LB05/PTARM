@@ -24,12 +24,11 @@ const partesPageSize = document.getElementById("partesPageSize");
 const partesPrevPage = document.getElementById("partesPrevPage");
 const partesNextPage = document.getElementById("partesNextPage");
 const partesPageInfo = document.getElementById("partesPageInfo");
-const mpOptions = document.getElementById("mpOptions");
 const respondienteOptions = document.getElementById("respondienteOptions");
 const complementQuestions = document.getElementById("complementQuestions");
 const canWritePartes = hasRole("administrador", "capturista");
 const canExportPartes = hasRole("administrador", "capturista", "auxiliar");
-const mpInput = parteForm.elements.mp_nombre;
+const mpInput = parteForm.elements.id_mp;
 const respondienteInput = parteForm.elements.respondiente_nombre;
 let catalogsLoaded = false;
 
@@ -53,9 +52,11 @@ async function loadPartes() {
 /** Carga MP y respondientes desde base de datos para los campos buscables. */
 async function loadPartCatalogs(force = false) {
   if (catalogsLoaded && !force) return;
+  const selectedMp = mpInput.value;
   const data = await api("/api/partes/catalogos");
   if (!data?.success) return;
-  mpOptions.innerHTML = data.data.mps.map((mp) => `<option value="${escapeAttr(mp.nombre)}"></option>`).join("");
+  mpInput.innerHTML = `<option value="">Sin MP</option>${data.data.mps.map((mp) => `<option value="${escapeAttr(mp.id_mp)}">${escapeHtml(mp.nombre)}</option>`).join("")}`;
+  if (selectedMp) mpInput.value = selectedMp;
   respondienteOptions.innerHTML = data.data.respondientes.map((respondiente) => `<option value="${escapeAttr(respondiente.nombre)}"></option>`).join("");
   catalogsLoaded = true;
 }
@@ -79,34 +80,52 @@ function renderPartes() {
   partesRows.innerHTML = visible.map((parte) => `
     <tr>
       <td>${parte.folio || ""}</td>
-      <td>${parte.respondiente_nombre || "Parte de transito"}</td>
+      <td>${parte.respondiente_nombre || "Parte de tránsito"}</td>
       <td>${formatDate(parte.fecha)}</td>
+      <td>${renderStatus(parte.estado)}</td>
       <td>${parte.mp_nombre || "Sin MP"}</td>
       <td><span class="person-cell"><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${parte.encargado_nombre || "Sin asignar"}</span></td>
       <td>${renderParteActions(parte)}</td>
     </tr>
-  `).join("") || `<tr><td colspan="6">Aun no hay partes registrados.</td></tr>`;
+  `).join("") || `<tr><td colspan="7">Aún no hay partes registrados.</td></tr>`;
 
   partesGridView.innerHTML = visible.map((parte) => `
     <article class="parte-card">
       <div>
         <span class="parte-folio">${parte.folio || "Sin folio"}</span>
-        <h3>${parte.respondiente_nombre || "Parte de transito"}</h3>
+        <h3>${parte.respondiente_nombre || "Parte de tránsito"}</h3>
       </div>
       <p><i class="far fa-calendar"></i> ${formatDate(parte.fecha) || "Sin fecha"}</p>
       <p><i class="fas fa-user-shield"></i> ${parte.mp_nombre || "Sin MP"}</p>
       <p><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${parte.encargado_nombre || "Sin asignar"}</p>
-      <p><i class="fas fa-circle"></i> ${parte.estado || "Sin estado"}</p>
+      ${renderStatus(parte.estado)}
       <div class="card-actions">
         ${canWritePartes ? `<button class="icon-btn edit" onclick="openParteModal('edit', ${parte.id_parte})"><i class="fas fa-edit"></i></button>
         <button class="icon-btn delete" onclick="deleteParte(${parte.id_parte})"><i class="fas fa-trash"></i></button>` : ""}
         <button class="icon-btn view" onclick="openParteModal('view', ${parte.id_parte})"><i class="fas fa-eye"></i></button>
       </div>
     </article>
-  `).join("") || `<p class="empty-state">Aun no hay partes registrados.</p>`;
+  `).join("") || `<p class="empty-state">Aún no hay partes registrados.</p>`;
 
   renderPartesPageControls();
   applyViewMode();
+}
+
+/** Muestra el estado del parte con punto de color semantico. */
+function renderStatus(estado = "") {
+  const label = estado || "Sin estado";
+  return `<span class="status-pill status-${statusKey(label)}"><span class="status-dot"></span>${escapeHtml(label)}</span>`;
+}
+
+/** Convierte el texto de estado en clase CSS segura. */
+function statusKey(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 /** Genera los botones permitidos para editar, eliminar o visualizar un parte. */
@@ -132,7 +151,7 @@ function pagedPartes() {
 function renderPartesPageControls() {
   const pageSize = Number(partesPageSize.value || 5);
   const totalPages = Math.max(1, Math.ceil(partes.length / pageSize));
-  partesPageInfo.textContent = `Pagina ${partesPage} de ${totalPages}`;
+  partesPageInfo.textContent = `Página ${partesPage} de ${totalPages}`;
   partesPrevPage.disabled = partesPage <= 1;
   partesNextPage.disabled = partesPage >= totalPages;
 }
@@ -152,7 +171,7 @@ async function openParteModal(mode, id = null) {
   const title = document.getElementById("parteModalTitle");
   const submit = document.getElementById("parteSubmit");
   title.textContent = mode === "edit" ? "Editar Parte" : mode === "view" ? "Visualizar Parte" : "Nuevo Parte";
-  submit.textContent = mode === "edit" ? "Guardar Parte" : "Crear Nuevo";
+  submit.textContent = mode === "edit" ? "Guardar parte" : "Crear nuevo";
 
   if (id) {
     const data = await api(`/api/partes/${id}`);
@@ -177,18 +196,35 @@ function setParteFormMode(mode) {
   vehiclesWrap.classList.toggle("view-only", isView);
 }
 
-/** Llena el formulario con la informacion de un parte existente. */
+/** Llena el formulario con la información de un parte existente. */
 function fillForm(parte) {
+  ensureSelectOption(mpInput, parte.id_mp, parte.mp_nombre);
   Object.entries(parte).forEach(([key, value]) => {
     const el = parteForm.elements[key];
     if (!el || value === null) return;
+    if (el.tagName === "SELECT") ensureSelectOption(el, value);
     if (el.type === "checkbox") el.checked = Boolean(value);
     else if (el.length && el[0]?.type === "radio") [...el].forEach((radio) => radio.checked = radio.value === value);
     else el.value = String(value).slice(0, el.type === "date" ? 10 : undefined);
   });
+  fillComplementDetails(parte);
   resetVehicles(parte.vehiculos?.length ? parte.vehiculos : [parte]);
   vehiclePersonSelect.value = parte.id_vehiculo || "";
   updateComplementQuestions();
+}
+
+/** Agrega una opcion temporal si un parte antiguo usa un valor que ya no esta activo. */
+function ensureSelectOption(select, value, label = value) {
+  if (value === null || value === undefined || value === "") return;
+  const exists = [...select.options].some((option) => option.value === String(value));
+  if (exists) return;
+  select.innerHTML += `<option value="${escapeAttr(value)}">${escapeHtml(label)}</option>`;
+}
+
+/** Restaura los campos especificos de complementos al abrir un parte existente. */
+function fillComplementDetails(parte) {
+  parteForm.numero_fallecidos.value = parte.numero_fallecidos || "";
+  parteForm.observacion_fallecidos.value = parte.observacion_fallecidos || "";
 }
 
 parteForm.addEventListener("submit", async (event) => {
@@ -204,6 +240,10 @@ parteForm.addEventListener("submit", async (event) => {
   payload.personas_fallecidas = parteForm.personas_fallecidas.checked;
   payload.personas_heridas = parteForm.personas_heridas.checked;
   payload.otros = parteForm.otros.checked;
+  if (!payload.personas_fallecidas) {
+    payload.numero_fallecidos = "";
+    payload.observacion_fallecidos = "";
+  }
   if (!payload.personas_heridas) {
     payload.numero_heridos = "";
     payload.gravedad = "";
@@ -264,7 +304,7 @@ function renderExportRows() {
         (parte) => `
           <tr>
             <td>${parte.folio || ""}</td>
-            <td>${parte.respondiente_nombre || "Parte de transito"}</td>
+            <td>${parte.respondiente_nombre || "Parte de tránsito"}</td>
             <td>${formatDate(parte.fecha)}</td>
             <td>${parte.mp_nombre || "Sin MP"}</td>
             <td><span class="person-cell"><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${parte.encargado_nombre || "Sin asignar"}</span></td>
@@ -322,7 +362,7 @@ async function loadDetailedParts(rows) {
   return detailed;
 }
 
-/** Decide el tipo de archivo que se descargara segun la opcion elegida. */
+/** Decide el tipo de archivo que se descargará según la opción elegida. */
 function downloadExport(type, rows) {
   const stamp = new Date().toISOString().slice(0, 10);
   if (type === "excel") {
@@ -379,7 +419,7 @@ function exportHtml(rows) {
       <body>
         <main class="sheet">
           <header class="doc-header">
-            <h1>Partes de transito</h1>
+            <h1>Partes de tránsito</h1>
             <p>Total de partes: ${rows.length} | Generado: ${escapeHtml(generatedAt)}</p>
           </header>
           ${rows.map(exportPartSection).join("")}
@@ -427,17 +467,19 @@ function exportPartSection(parte) {
 
         <h3 class="section-title">Personas involucradas</h3>
         <div class="info-grid">
-          ${exportField("Numero de personas", parte.numero_personas)}
-          ${exportField("Vehiculo asociado", parte.id_vehiculo)}
+          ${exportField("Número de personas", parte.numero_personas)}
+          ${exportField("Vehículo asociado", parte.id_vehiculo)}
           ${exportField("Personas fallecidas", boolText(parte.personas_fallecidas))}
+          ${exportField("Número de fallecidos", parte.numero_fallecidos)}
+          ${exportField("Observación de fallecidos", parte.observacion_fallecidos)}
           ${exportField("Personas heridas", boolText(parte.personas_heridas))}
           ${exportField("Otros", boolText(parte.otros))}
-          ${exportField("Numero de heridos", parte.numero_heridos)}
+          ${exportField("Número de heridos", parte.numero_heridos)}
           ${exportField("Gravedad", parte.gravedad)}
           ${exportField("Observaciones", parte.observaciones)}
         </div>
 
-        <h3 class="section-title">Vehiculos</h3>
+        <h3 class="section-title">Vehículos</h3>
         <table>
           <thead><tr><th>#</th><th>Marca</th><th>Modelo</th><th>Tipo</th><th>No. Serie</th><th>No. Placa</th></tr></thead>
           <tbody>${renderVehicleRows(parte.vehiculos, true)}</tbody>
@@ -469,14 +511,14 @@ function excelHtml(rows) {
         </style>
       </head>
       <body>
-        <h1>Partes de transito</h1>
+        <h1>Partes de tránsito</h1>
         <p>Total de partes: ${rows.length} | Generado: ${escapeHtml(new Date().toLocaleString("es-MX"))}</p>
         <table>
           <thead>
             <tr>
               <th>Folio</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Gravedad</th>
               <th>Respondiente</th><th>MP asignado</th><th>Usuario encargado</th>
-              <th>Personas</th><th>Heridos</th><th>Observaciones</th><th>Vehiculos</th>
+              <th>Personas</th><th>Fallecidos</th><th>Heridos</th><th>Observaciones</th><th>Vehículos</th>
             </tr>
           </thead>
           <tbody>
@@ -491,6 +533,7 @@ function excelHtml(rows) {
                 <td>${fieldHtml(parte.mp_nombre)}</td>
                 <td>${fieldHtml(parte.encargado_nombre)}</td>
                 <td>${fieldHtml(parte.numero_personas)}</td>
+                <td>${fieldHtml(parte.numero_fallecidos)}</td>
                 <td>${fieldHtml(parte.numero_heridos)}</td>
                 <td>${fieldHtml(parte.observaciones)}</td>
                 <td>${fieldHtml(vehicleSummary(parte.vehiculos))}</td>
@@ -506,12 +549,14 @@ function excelHtml(rows) {
             <tr><th>MP asignado</th><td>${fieldHtml(parte.mp_nombre)}</td></tr>
             <tr><th>Encargado</th><td>${fieldHtml(parte.encargado_nombre)}</td></tr>
             <tr><th>Personas fallecidas</th><td>${fieldHtml(boolText(parte.personas_fallecidas))}</td></tr>
+            <tr><th>Número de fallecidos</th><td>${fieldHtml(parte.numero_fallecidos)}</td></tr>
+            <tr><th>Observación de fallecidos</th><td>${fieldHtml(parte.observacion_fallecidos)}</td></tr>
             <tr><th>Personas heridas</th><td>${fieldHtml(boolText(parte.personas_heridas))}</td></tr>
             <tr><th>Otros</th><td>${fieldHtml(boolText(parte.otros))}</td></tr>
             <tr><th>Observaciones</th><td>${fieldHtml(parte.observaciones)}</td></tr>
           </table>
           <table>
-            <tr><td class="section" colspan="6">Vehiculos</td></tr>
+            <tr><td class="section" colspan="6">Vehículos</td></tr>
             <tr><th>#</th><th>Marca</th><th>Modelo</th><th>Tipo</th><th>No. Serie</th><th>No. Placa</th></tr>
             ${renderVehicleRows(parte.vehiculos, true)}
           </table>
@@ -645,24 +690,10 @@ function updateComplementQuestions() {
   });
 }
 
-/** Une en observaciones las respuestas extra de los complementos. */
+/** Guarda observaciones solo cuando el complemento "Otros" esta activo. */
 function buildComplementNotes(payload) {
-  const notes = [];
   const base = textValue(payload.observaciones, "");
-  if (payload.otros && base) notes.push(base);
-  if (payload.personas_fallecidas && payload.numero_fallecidos) {
-    notes.push(`Personas fallecidas: ${payload.numero_fallecidos}`);
-  }
-  if (payload.personas_fallecidas && payload.observacion_fallecidos) {
-    notes.push(`Observacion de fallecidos: ${payload.observacion_fallecidos}`);
-  }
-  if (payload.personas_heridas && payload.numero_heridos) {
-    notes.push(`Personas heridas: ${payload.numero_heridos}`);
-  }
-  if (payload.personas_heridas && payload.gravedad) {
-    notes.push(`Gravedad de heridos: ${payload.gravedad}`);
-  }
-  return notes.join(" | ");
+  return payload.otros ? base : "";
 }
 
 /** Aplica vista de lista o tarjetas en Gestionar partes. */
@@ -779,16 +810,14 @@ vehiclesWrap.addEventListener("input", refreshVehicleSelect);
 ["personas_fallecidas", "personas_heridas", "otros"].forEach((name) => {
   parteForm.elements[name].addEventListener("change", updateComplementQuestions);
 });
-[mpInput, respondienteInput].forEach((input) => {
-  input.addEventListener("focus", () => loadPartCatalogs(true));
-  input.addEventListener("click", () => {
-    loadPartCatalogs(true);
-    try {
-      input.showPicker?.();
-    } catch {
-      // Algunos navegadores no abren datalist programaticamente.
-    }
-  });
+respondienteInput.addEventListener("focus", () => loadPartCatalogs(true));
+respondienteInput.addEventListener("click", () => {
+  loadPartCatalogs(true);
+  try {
+    respondienteInput.showPicker?.();
+  } catch {
+    // Algunos navegadores no abren datalist programaticamente.
+  }
 });
 
 exportSearch.addEventListener("input", renderExportRows);

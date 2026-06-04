@@ -1,4 +1,4 @@
-/** Lee del navegador los datos del usuario que inicio sesion. */
+/** Lee del navegador los datos del usuario que inició sesión. */
 function getUser() {
   try {
     return JSON.parse(localStorage.getItem("usuario") || "{}");
@@ -17,7 +17,7 @@ function authHeaders() {
   return { Authorization: `Bearer ${token()}` };
 }
 
-/** Evita entrar a paginas privadas si no hay sesion activa. */
+/** Evita entrar a páginas privadas si no hay sesión activa. */
 function requireAuth() {
   if (!token()) location.href = "/";
 }
@@ -84,18 +84,31 @@ function setupUserMenu() {
     const trigger = menu.querySelector(".user-top");
     const dropdown = menu.querySelector(".user-dropdown");
     if (!trigger || !dropdown || trigger.dataset.menuReady === "1") return;
+    const bell = trigger.querySelector(".fa-bell");
+    const notifications = ensureNotificationPanel(menu);
 
     trigger.dataset.menuReady = "1";
     trigger.setAttribute("aria-haspopup", "true");
     trigger.setAttribute("aria-expanded", "false");
+    bell?.classList.add("notification-trigger");
+    bell?.setAttribute("title", "Notificaciones");
 
     trigger.addEventListener("click", (event) => {
       event.stopPropagation();
+      if (event.target.closest(".notification-trigger")) {
+        menu.classList.remove("open");
+        trigger.setAttribute("aria-expanded", "false");
+        const isOpen = notifications.classList.toggle("show");
+        if (isOpen) loadNotifications(notifications);
+        return;
+      }
+      notifications.classList.remove("show");
       const isOpen = menu.classList.toggle("open");
       trigger.setAttribute("aria-expanded", isOpen ? "true" : "false");
     });
 
     dropdown.addEventListener("click", (event) => event.stopPropagation());
+    notifications.addEventListener("click", (event) => event.stopPropagation());
   });
 }
 
@@ -104,7 +117,102 @@ document.addEventListener("click", () => {
     menu.classList.remove("open");
     menu.querySelector(".user-top")?.setAttribute("aria-expanded", "false");
   });
+  document.querySelectorAll(".notification-panel.show").forEach((panel) => panel.classList.remove("show"));
 });
+
+/** Crea el panel de notificaciones una sola vez junto al menu de usuario. */
+function ensureNotificationPanel(menu) {
+  let panel = menu.querySelector(".notification-panel");
+  if (panel) return panel;
+  panel = document.createElement("div");
+  panel.className = "notification-panel";
+  panel.innerHTML = `
+    <div class="notification-head">Centro de notificaciones</div>
+    <div class="notification-list" data-notification-list>
+      <div class="notification-item">
+        <span class="notification-icon"><i class="far fa-file-alt"></i></span>
+        <div><strong>Cargando...</strong><p>Buscando actividad reciente.</p></div>
+      </div>
+    </div>
+    <a class="notification-foot" href="/historial.html">Ver historial</a>
+  `;
+  menu.appendChild(panel);
+  return panel;
+}
+
+/** Carga actividades relevantes para partes creados por el usuario actual. */
+async function loadNotifications(panel) {
+  const list = panel.querySelector("[data-notification-list]");
+  list.innerHTML = `
+    <div class="notification-item">
+      <span class="notification-icon"><i class="far fa-file-alt"></i></span>
+      <div><strong>Cargando...</strong><p>Buscando actividad reciente.</p></div>
+    </div>
+  `;
+  const data = await api("/api/historial/notificaciones");
+  if (!data?.success) {
+    list.innerHTML = `
+      <div class="notification-item">
+        <span class="notification-icon"><i class="fas fa-exclamation"></i></span>
+        <div><strong>No se pudieron cargar</strong><p>Intenta de nuevo más tarde.</p></div>
+      </div>
+    `;
+    return;
+  }
+
+  if (!data.data.length) {
+    list.innerHTML = `
+      <div class="notification-item">
+        <span class="notification-icon"><i class="far fa-file-alt"></i></span>
+        <div><strong>Sin actividad reciente</strong><p>No hay cambios en tus partes creados.</p></div>
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML = data.data.map((item) => {
+    const deleted = item.accion === "ELIMINAR";
+    const folio = item.folio || extractNotificationFolio(item.descripcion) || "Sin folio";
+    const action = deleted ? "Eliminado" : "Modificado";
+    const verb = deleted ? "eliminó" : "modificó";
+    const actor = item.usuario_nombre || "Usuario no disponible";
+    const time = formatNotificationTime(item.fecha);
+    return `
+      <div class="notification-item ${deleted ? "delete" : "edit"}">
+        <span class="notification-icon"><i class="${deleted ? "far fa-trash-alt" : "far fa-edit"}"></i></span>
+        <div>
+          <strong>${escapeHtml(folio)} · ${action}</strong>
+          <p>${escapeHtml(actor)} ${verb} este parte${time ? ` a las ${time}` : ""}.</p>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+/** Extrae un folio desde descripciones de historial de partes eliminados. */
+function extractNotificationFolio(text = "") {
+  const match = String(text).match(/Parte\s+([^|]+?)\s+(?:eliminado|editado|actualizado)/i);
+  return match ? match[1].trim() : "";
+}
+
+/** Formatea solo la hora de una actividad de notificacion. */
+function formatNotificationTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+
+/** Escapa texto antes de insertarlo como HTML. */
+function escapeHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[char]);
+}
 
 /** Contrae o expande la barra lateral y recuerda la preferencia. */
 function toggleSidebar() {
@@ -114,9 +222,9 @@ function toggleSidebar() {
   localStorage.setItem("sidebarCollapsed", shell.classList.contains("sidebar-collapsed") ? "1" : "0");
 }
 
-/** Cierra sesion tras confirmacion y limpia los datos locales. */
+/** Cierra sesión tras confirmación y limpia los datos locales. */
 function logout() {
-  showConfirm("Cerrar sesion", "Seguro que deseas salir?", () => {
+  showConfirm("Cerrar sesión", "¿Seguro que deseas salir?", () => {
     localStorage.clear();
     location.href = "/";
   });
@@ -194,7 +302,7 @@ function showConfirm(title, text, onConfirm) {
   no.onclick = cleanup;
 }
 
-/** Llama a la API con autenticacion y manejo comun de errores/sesion expirada. */
+/** Llama a la API con autenticación y manejo común de errores/sesión expirada. */
 async function api(path, options = {}) {
   const headers = options.body instanceof FormData ? authHeaders() : { ...authHeaders(), "Content-Type": "application/json" };
   try {
@@ -205,7 +313,7 @@ async function api(path, options = {}) {
       return null;
     }
     const data = await res.json();
-    if (!res.ok && !data?.error) return { success: false, error: "Ocurrio un error en el servidor" };
+    if (!res.ok && !data?.error) return { success: false, error: "Ocurrió un error en el servidor" };
     return data;
   } catch {
     return { success: false, error: "No se pudo conectar con el servidor" };

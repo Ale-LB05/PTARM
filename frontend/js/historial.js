@@ -77,7 +77,7 @@ function pagedHistory() {
 function renderHistoryPageControls() {
   const pageSize = Number(historyPageSize.value || 5);
   const totalPages = Math.max(1, Math.ceil(historyItems.length / pageSize));
-  historyPageInfo.textContent = `Pagina ${historyPage} de ${totalPages}`;
+  historyPageInfo.textContent = `Página ${historyPage} de ${totalPages}`;
   historyPrevPage.disabled = historyPage <= 1;
   historyNextPage.disabled = historyPage >= totalPages;
 }

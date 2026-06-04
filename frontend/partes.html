@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Consultas | Partes de transito</title>
+    <title>Partes | PTARM</title>
     <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="/css/styles.css" />
@@ -12,16 +12,16 @@
   <body>
     <div class="app-shell">
       <aside class="sidebar">
-        <a class="side-brand" href="/inicio.html"
-          ><span class="brand-icon"><img src="/img/iconos/menu.png" alt="" /></span
-          ><span class="brand-text">Menu</span></a
-        >
+        <a class="side-brand" href="/inicio.html">
+          <span class="brand-icon"><img src="/img/logot.png" alt="PTARM" /></span>
+          <span class="brand-text">PTARM</span>
+        </a>
         <nav class="side-nav">
           <a data-page="inicio" href="/inicio.html"
             ><span class="nav-icon"><img src="/img/iconos/Inicio.png" alt="" /></span
             ><span>Inicio</span></a
           >
-          <div class="side-section">Administracion</div>
+          <div class="side-section">Administración</div>
           <a data-page="personal" href="/personal.html"
             ><span class="nav-icon"><img src="/img/iconos/personal.png" alt="" /></span
             ><span>Personal</span></a
@@ -33,10 +33,10 @@
             ><span class="nav-icon"><img src="/img/iconos/historial.png" alt="" /></span
             ><span>Historial</span></a
           >
-          <div class="side-section">Sesion</div>
+          <div class="side-section">Sesión</div>
           <button onclick="logout()">
             <span class="nav-icon"><img src="/img/iconos/salida.png" alt="" /></span
-            ><span>Cerrar sesion</span></button
+            ><span>Cerrar sesión</span></button
           ><button class="collapse-btn" onclick="toggleSidebar()">
             <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
             ><span>Ocultar</span>
@@ -45,9 +45,10 @@
       </aside>
       <main class="content">
         <header class="topbar">
-          <a href="/inicio.html"
-            ><img class="logo" src="/img/Logo.png" alt="FGE"
-          /></a>
+          <a class="topbar-brand" href="/inicio.html">
+            <img class="logo" src="/img/Logo.png" alt="FGE" />
+            <span>Sistema de partes</span>
+          </a>
           <div class="user-menu">
             <button class="user-top" type="button">
               <i class="fas fa-bell"></i><span data-user-name></span
@@ -60,13 +61,13 @@
           </div>
         </header>
         <section class="page">
-          <h1>Partes de transito</h1>
+          <h1>Partes de tránsito</h1>
           <div class="toolbar">
             <div class="toolbar-left">
               <input
                 id="partSearch"
                 class="search"
-                placeholder="Buscar Partes"
+                placeholder="Buscar partes"
               /><button
                 class="btn icon-only view-toggle active"
                 id="listViewBtn"
@@ -86,7 +87,7 @@
               <button class="btn blue" id="openExportBtn" onclick="openExport()">
                 <i class="fas fa-file-export"></i> Exportar</button
               ><button class="btn green" id="createParteBtn" onclick="openParteModal('create')">
-                <i class="fas fa-file-medical"></i> Crear Nuevo
+                <i class="fas fa-file-medical"></i> Crear nuevo
               </button>
             </div>
           </div>
@@ -101,11 +102,11 @@
               </select></label
             >
             <div class="pager">
-              <button class="btn icon-only" id="partesPrevPage" type="button" title="Pagina anterior">
+              <button class="btn icon-only" id="partesPrevPage" type="button" title="Página anterior">
                 <i class="fas fa-chevron-left"></i>
               </button>
               <span id="partesPageInfo"></span>
-              <button class="btn icon-only" id="partesNextPage" type="button" title="Pagina siguiente">
+              <button class="btn icon-only" id="partesNextPage" type="button" title="Página siguiente">
                 <i class="fas fa-chevron-right"></i>
               </button>
             </div>
@@ -114,9 +115,10 @@
             <table>
               <thead>
                 <tr>
-                  <th>No.Parte</th>
+                  <th>No. parte</th>
                   <th>Nombre</th>
                   <th>Fecha</th>
+                  <th>Estado</th>
                   <th>MP</th>
                   <th>Encargado</th>
                   <th>Acciones</th>
@@ -133,9 +135,9 @@
     <div id="parteModal" class="modal-backdrop">
       <div class="modal">
         <div class="modal-title">
-          <h2 id="parteModalTitle">Nuevo Parte</h2>
+          <h2 id="parteModalTitle">Nuevo parte</h2>
           <button class="modal-close" onclick="closeModal('parteModal')">
-            X
+            <i class="fas fa-times"></i>
           </button>
         </div>
         <form id="parteForm" class="modal-body">
@@ -150,23 +152,23 @@
           </div>
           <div class="form-grid cols-2">
             <label
-              >MP Asignado<div class="lookup-field"><input
-                name="mp_nombre"
-                list="mpOptions"
-                autocomplete="off"
-                placeholder="Busca o selecciona un MP" /><i class="fas fa-search"></i></div><datalist id="mpOptions"></datalist></label
+              >MP asignado<select
+                name="id_mp"
+                id="mpSelect">
+                  <option value="">Sin MP</option>
+                </select></label
             ><label
               >Respondiente<div class="lookup-field"><input
                 name="respondiente_nombre"
                 list="respondienteOptions"
                 autocomplete="off"
-                placeholder="Selecciona un Respondiente"
+                placeholder="Selecciona un respondiente"
             /><i class="fas fa-search"></i></div><datalist id="respondienteOptions"></datalist></label>
           </div>
           <div class="sub-row">
             <span>Dato(s)</span
             ><button class="tiny-add" id="addVehicleBtn" type="button">
-              Agregar Nuevo Carro +
+              Agregar nuevo carro +
             </button>
           </div>
           <div id="vehiclesWrap" class="vehicles-wrap"></div>
@@ -175,12 +177,12 @@
             <div class="people-grid">
               <div class="form-grid">
                 <label
-                  >No. Personas<input
+                  >No. personas<input
                     type="number"
                     name="numero_personas"
-                    placeholder="Numero de pers..." /></label
+                    placeholder="Número de personas" /></label
                 ><label
-                  >No. Vehiculo<select name="id_vehiculo_personas" id="vehiclePersonSelect">
+                  >No. vehículo<select name="id_vehiculo_personas" id="vehiclePersonSelect">
                     <option>Selecciona un carro</option>
                   </select></label
                 >
@@ -205,12 +207,12 @@
                 <h4>Datos de personas fallecidas</h4>
                 <div class="form-grid cols-2">
                   <label
-                    >Cuantas personas fallecieron?<input
+                    >¿Cuántas personas fallecieron?<input
                       type="number"
                       name="numero_fallecidos"
-                      placeholder="Numero de personas" /></label
+                      placeholder="Número de personas" /></label
                   ><label
-                    >Observacion de fallecidos<input
+                    >Observación de fallecidos<input
                       name="observacion_fallecidos"
                       placeholder="Detalle breve" /></label
                   >
@@ -220,12 +222,12 @@
                 <h4>Datos de personas heridas</h4>
                 <div class="form-grid cols-2">
                   <label
-                    >Cuantas personas hubo heridas?<input
+                    >¿Cuántas personas hubo heridas?<input
                       type="number"
                       name="numero_heridos"
-                      placeholder="Numero de personas" /></label
+                      placeholder="Número de personas" /></label
                   ><div>
-                    <strong>Gravedad?</strong>
+                    <strong>¿Gravedad?</strong>
                     <div class="radio-list">
                       <label
                         ><input type="radio" name="gravedad" value="Bajo" />
@@ -286,7 +288,7 @@
             >
               Cancelar</button
             ><button class="btn green" type="submit" id="parteSubmit">
-              Crear Nuevo
+              Crear nuevo
             </button>
           </div>
         </form>
@@ -296,9 +298,9 @@
     <div id="partDetailModal" class="modal-backdrop">
       <div class="modal detail">
         <div class="modal-title">
-          <h2>Informacion del parte</h2>
+          <h2>Información del parte</h2>
           <button class="modal-close" onclick="closeModal('partDetailModal')">
-            X
+            <i class="fas fa-times"></i>
           </button>
         </div>
         <div class="modal-body" id="partDetailBody"></div>
@@ -310,19 +312,19 @@
         <div class="modal-title">
           <h2>Exportar</h2>
           <button class="modal-close" onclick="closeModal('exportModal')">
-            X
+            <i class="fas fa-times"></i>
           </button>
         </div>
         <div class="modal-body">
           <div class="export-head">
             <div>
-              <strong>Partes de transito</strong>
-              <p>Selecciona los registros que deseas preparar. Cada parte se exportara con sus datos completos.</p>
+              <strong>Partes de tránsito</strong>
+              <p>Selecciona los registros que deseas preparar. Cada parte se exportará con sus datos completos.</p>
             </div>
             <div class="export-count" id="exportCount">0 seleccionados</div>
           </div>
           <div class="toolbar export-toolbar">
-            <input id="exportSearch" class="search" placeholder="Buscar Partes" />
+            <input id="exportSearch" class="search" placeholder="Buscar partes" />
             <label class="inline-check"
               ><input id="exportSelectAll" type="checkbox" /> Seleccionar todo</label
             >
@@ -331,7 +333,7 @@
             <table>
               <thead>
                 <tr>
-                  <th>No.Parte</th>
+                  <th>No. parte</th>
                   <th>Nombre</th>
                   <th>Fecha</th>
                   <th>MP</th>

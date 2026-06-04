@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Perfil | Partes de transito</title>
+    <title>Perfil | PTARM</title>
     <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="/css/styles.css" />
@@ -12,16 +12,16 @@
   <body>
     <div class="app-shell">
       <aside class="sidebar">
-        <a class="side-brand" href="/inicio.html"
-          ><span class="brand-icon"><img src="/img/iconos/menu.png" alt="" /></span
-          ><span class="brand-text">Menu</span></a
-        >
+        <a class="side-brand" href="/inicio.html">
+          <span class="brand-icon"><img src="/img/logot.png" alt="PTARM" /></span>
+          <span class="brand-text">PTARM</span>
+        </a>
         <nav class="side-nav">
           <a data-page="inicio" href="/inicio.html"
             ><span class="nav-icon"><img src="/img/iconos/Inicio.png" alt="" /></span
             ><span>Inicio</span></a
           >
-          <div class="side-section">Administracion</div>
+          <div class="side-section">Administración</div>
           <a data-page="personal" href="/personal.html"
             ><span class="nav-icon"><img src="/img/iconos/personal.png" alt="" /></span
             ><span>Personal</span></a
@@ -33,10 +33,10 @@
             ><span class="nav-icon"><img src="/img/iconos/historial.png" alt="" /></span
             ><span>Historial</span></a
           >
-          <div class="side-section">Sesion</div>
+          <div class="side-section">Sesión</div>
           <button onclick="logout()">
             <span class="nav-icon"><img src="/img/iconos/salida.png" alt="" /></span
-            ><span>Cerrar sesion</span></button
+            ><span>Cerrar sesión</span></button
           ><button class="collapse-btn" onclick="toggleSidebar()">
             <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
             ><span>Ocultar</span>
@@ -45,9 +45,10 @@
       </aside>
       <main class="content">
         <header class="topbar">
-          <a href="/inicio.html"
-            ><img class="logo" src="/img/Logo.png" alt="FGE"
-          /></a>
+          <a class="topbar-brand" href="/inicio.html">
+            <img class="logo" src="/img/Logo.png" alt="FGE" />
+            <span>Sistema de partes</span>
+          </a>
           <div class="user-menu">
             <button class="user-top" type="button">
               <i class="fas fa-bell"></i><span data-user-name></span
@@ -70,7 +71,7 @@
                 alt="Perfil" />
             </div>
             <div class="account-card">
-              <h3>Informacion de cuenta</h3>
+              <h3>Información de cuenta</h3>
               <div class="account-row">
                 <div class="account-label">
                   <span>Nombre</span>
@@ -94,14 +95,14 @@
               </div>
               <div class="account-row">
                 <div class="account-label">
-                  <span>Contrasena</span>
+                  <span>Contraseña</span>
                 </div>
                 <strong>••••••••</strong>
                 <button
                   class="account-action"
                   type="button"
                   id="openPasswordModal"
-                  title="Cambiar contrasena"
+                  title="Cambiar contraseña"
                 >
                   <i class="fas fa-key"></i>
                 </button>
@@ -115,9 +116,9 @@
               </div>
               <div class="account-row">
                 <div class="account-label">
-                  <span>Institucion</span>
+                  <span>Institución</span>
                 </div>
-                <strong id="profileInstitute">Sin institucion</strong>
+                <strong id="profileInstitute">Sin institución</strong>
                 <span></span>
               </div>
             </div>
@@ -143,17 +144,17 @@
     <div id="emailModal" class="modal-backdrop">
       <div class="modal profile-modal">
         <div class="modal-title profile-modal-title">
-          <h2>Editar Correo</h2>
+          <h2>Editar correo</h2>
           <button class="modal-close" onclick="closeProfileModal('emailModal')">
             <i class="fas fa-times"></i>
           </button>
         </div>
         <form id="emailForm" class="modal-body">
           <h3 class="modal-section-title">
-            Actualizacion de Contacto
+            Actualización de contacto
           </h3>
           <label class="input-with-icon"
-            >Nuevo Correo Electronico
+            >Nuevo correo electrónico
             <span>
               <input type="email" name="correo" placeholder="correo@dominio.com" />
             </span></label
@@ -162,7 +163,7 @@
             <button class="btn red outline" type="button" onclick="closeProfileModal('emailModal')">
               Cancelar</button
             ><button class="btn teal" type="submit">
-              <i class="fas fa-save"></i> Actualizar Correo
+              <i class="fas fa-save"></i> Actualizar correo
             </button>
           </div>
         </form>
@@ -178,31 +179,31 @@
         </div>
         <form id="passwordForm" class="modal-body">
           <h3 class="modal-section-title">
-            Cambio de Contrasena
+            Cambio de contraseña
           </h3>
           <label class="input-with-icon"
-            >Contrasena Actual
+            >Contraseña actual
             <span>
               <input type="password" name="current_password" placeholder="Ingresa tu clave actual" />
-              <button type="button" class="toggle-secret" title="Mostrar contrasena">
+              <button type="button" class="toggle-secret" title="Mostrar contraseña">
                 <i class="fas fa-eye"></i>
               </button>
             </span></label
           >
           <label class="input-with-icon"
-            >Nueva Contrasena
+            >Nueva contraseña
             <span>
-              <input type="password" name="password" placeholder="Minimo 6 caracteres" />
-              <button type="button" class="toggle-secret" title="Mostrar contrasena">
+              <input type="password" name="password" placeholder="Mínimo 6 caracteres" />
+              <button type="button" class="toggle-secret" title="Mostrar contraseña">
                 <i class="fas fa-eye"></i>
               </button>
             </span></label
           >
           <label class="input-with-icon"
-            >Confirmar Nueva Contrasena
+            >Confirmar nueva contraseña
             <span>
               <input type="password" name="confirm_password" placeholder="Repite la nueva clave" />
-              <button type="button" class="toggle-secret" title="Mostrar contrasena">
+              <button type="button" class="toggle-secret" title="Mostrar contraseña">
                 <i class="fas fa-eye"></i>
               </button>
             </span></label
@@ -211,7 +212,7 @@
             <button class="btn red outline" type="button" onclick="closeProfileModal('passwordModal')">
               Cancelar</button
             ><button class="btn teal" type="submit">
-              <i class="fas fa-save"></i> Cambiar Contrasena
+              <i class="fas fa-save"></i> Cambiar contraseña
             </button>
           </div>
         </form>

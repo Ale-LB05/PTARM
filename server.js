@@ -18,6 +18,7 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/partes", auth, require("./routes/partes"));
 app.use("/api/historial", auth, require("./routes/historial"));
 app.use("/api/usuarios", auth, require("./routes/usuarios"));
+app.use("/api/mps", auth, require("./routes/mps"));
 app.use("/api/perfil", auth, require("./routes/perfil"));
 
 // Entrada principal del frontend.

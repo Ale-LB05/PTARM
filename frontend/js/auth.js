@@ -1,7 +1,7 @@
 const loginForm = document.getElementById("loginForm");
 const setupForm = document.getElementById("setupForm");
 
-/** Alterna entre mostrar y ocultar un campo de contrasena. */
+/** Alterna entre mostrar y ocultar un campo de contraseña. */
 function togglePassword(button) {
   const input = button.parentElement.querySelector("input");
   const icon = button.querySelector("i");
@@ -24,7 +24,7 @@ async function checkStatus() {
 
 if (loginForm) {
   checkStatus();
-  // Inicia sesion, guarda token/usuario en localStorage y entra al sistema.
+  // Inicia sesión, guarda token/usuario en localStorage y entra al sistema.
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(loginForm));
@@ -35,12 +35,12 @@ if (loginForm) {
     });
     const data = await res.json();
     if (!data.success) {
-      showAuthAlert("Error", data.error || "No se pudo iniciar sesion", "error");
+      showAuthAlert("Error", data.error || "No se pudo iniciar sesión", "error");
       return;
     }
     localStorage.setItem("token", data.token);
     localStorage.setItem("usuario", JSON.stringify(data.usuario));
-    showAuthAlert("Bienvenido", "Inicio de sesion correcto", "success", () => {
+    showAuthAlert("Bienvenido", "Inicio de sesión correcto", "success", () => {
       location.href = "/inicio.html";
     });
   });
@@ -62,7 +62,7 @@ if (setupForm) {
       showAuthAlert("Error", data.error || "No se pudo crear el administrador", "error");
       return;
     }
-    showAuthAlert("Administrador creado", "Ya puedes iniciar sesion", "success", () => {
+    showAuthAlert("Administrador creado", "Ya puedes iniciar sesión", "success", () => {
       location.href = "/";
     });
   });

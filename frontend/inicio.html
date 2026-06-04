@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Inicio | Partes de transito</title>
+    <title>Inicio | PTARM</title>
     <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="/css/styles.css" />
@@ -12,16 +12,16 @@
   <body>
     <div class="app-shell">
       <aside class="sidebar">
-        <a class="side-brand" href="/inicio.html"
-          ><span class="brand-icon"><img src="/img/iconos/menu.png" alt="" /></span
-          ><span class="brand-text">Menu</span></a
-        >
+        <a class="side-brand" href="/inicio.html">
+          <span class="brand-icon"><img src="/img/logot.png" alt="PTARM" /></span>
+          <span class="brand-text">PTARM</span>
+        </a>
         <nav class="side-nav">
           <a data-page="inicio" href="/inicio.html"
             ><span class="nav-icon"><img src="/img/iconos/Inicio.png" alt="" /></span
             ><span>Inicio</span></a
           >
-          <div class="side-section">Administracion</div>
+          <div class="side-section">Administración</div>
           <a data-page="personal" href="/personal.html"
             ><span class="nav-icon"><img src="/img/iconos/personal.png" alt="" /></span
             ><span>Personal</span></a
@@ -35,10 +35,10 @@
             ><span class="nav-icon"><img src="/img/iconos/historial.png" alt="" /></span
             ><span>Historial</span></a
           >
-          <div class="side-section">Sesion</div>
+          <div class="side-section">Sesión</div>
           <button onclick="logout()">
             <span class="nav-icon"><img src="/img/iconos/salida.png" alt="" /></span
-            ><span>Cerrar sesion</span>
+            ><span>Cerrar sesión</span>
           </button>
           <button class="collapse-btn" onclick="toggleSidebar()">
             <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
@@ -48,9 +48,10 @@
       </aside>
       <main class="content">
         <header class="topbar">
-          <a href="/inicio.html"
-            ><img class="logo" src="/img/Logo.png" alt="FGE"
-          /></a>
+          <a class="topbar-brand" href="/inicio.html">
+            <img class="logo" src="/img/Logo.png" alt="FGE" />
+            <span>Sistema de partes</span>
+          </a>
           <div class="user-menu">
             <button class="user-top" type="button">
               <i class="fas fa-bell"></i><span data-user-name></span
@@ -64,13 +65,13 @@
         <section class="page">
           <div class="hero-card">
             <div>
-              <h1>Datos Generales</h1>
+              <h1>Datos generales</h1>
               <p>
-                Un parte de transito es un documento oficial que se elabora
-                cuando ocurre un accidente vial o choque de transito. Este
-                documento registra toda la informacion relacionada con el
-                incidente, como los datos de los vehiculos involucrados,
-                personas afectadas, ubicacion, fecha, hora y observaciones
+                Un parte de tránsito es un documento oficial que se elabora
+                cuando ocurre un accidente vial o choque de tránsito. Este
+                documento registra toda la información relacionada con el
+                incidente, como los datos de los vehículos involucrados,
+                personas afectadas, ubicación, fecha, hora y observaciones
                 realizadas por el personal encargado.
               </p>
             </div>
@@ -79,7 +80,7 @@
             </div>
           </div>
           <div class="section-title">
-            <h2>Titulo Referente a Partes</h2>
+            <h2>Partes recientes</h2>
             <p>
               Consulta los registros recientes y accede a las funciones
               principales del sistema.
@@ -89,7 +90,7 @@
             id="homeSearch"
             class="search"
             style="display: block; margin: 0 auto 22px"
-            placeholder="Buscar Partes"
+            placeholder="Buscar partes"
           />
           <div class="table-controls">
             <label class="inline-check"
@@ -102,11 +103,11 @@
               </select></label
             >
             <div class="pager">
-              <button class="btn icon-only" id="homePrevPage" type="button" title="Pagina anterior">
+              <button class="btn icon-only" id="homePrevPage" type="button" title="Página anterior">
                 <i class="fas fa-chevron-left"></i>
               </button>
               <span id="homePageInfo"></span>
-              <button class="btn icon-only" id="homeNextPage" type="button" title="Pagina siguiente">
+              <button class="btn icon-only" id="homeNextPage" type="button" title="Página siguiente">
                 <i class="fas fa-chevron-right"></i>
               </button>
             </div>
@@ -118,23 +119,23 @@
                   <th>No. Parte</th>
                   <th>Nombre</th>
                   <th>Fecha</th>
-                  <th>MP Asignado</th>
+                  <th>MP asignado</th>
                 </tr>
               </thead>
               <tbody id="homeRows"></tbody>
             </table>
           </div>
           <div class="section-title">
-            <h2>Menu del sistema</h2>
+            <h2>Menú del sistema</h2>
             <p>
-              Selecciona una opcion para trabajar con los partes de transito
+              Selecciona una opción para trabajar con los partes de tránsito
             </p>
           </div>
           <div class="menu-grid">
             <a class="menu-card hover-lift" data-page="partes" href="/partes.html"
               ><span>01</span>
               <h3>Lista de partes</h3>
-              <p>Crear, buscar, filtrar, consultar informacion y editar.</p></a
+              <p>Crear, buscar, filtrar, consultar información y editar.</p></a
             >
             <a class="menu-card hover-lift" data-page="historial" href="/historial.html"
               ><span>02</span>
@@ -152,7 +153,7 @@
               ><span>04</span>
               <h3>Personal</h3>
               <p>
-                Administrar usuarios, ministerios publicos y respondientes.
+                Administrar usuarios, ministerios públicos y respondientes.
               </p></a
             >
           </div>

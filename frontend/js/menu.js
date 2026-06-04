@@ -70,7 +70,7 @@ function dibujarPartes(partes) {
   tablaPartes.innerHTML = partes
     .map((parte) => {
       const folio = parte.folio || String(parte.id_parte).padStart(8, "0");
-      const nombreParte = parte.placas ? `Parte con placas ${parte.placas}` : "Parte de Transito";
+      const nombreParte = parte.placas ? `Parte con placas ${parte.placas}` : "Parte de tránsito";
 
       return `
         <tr>
@@ -96,7 +96,7 @@ async function cargarPartes(busqueda = "") {
     const resultado = await respuesta.json();
 
     if (!respuesta.ok) {
-      tablaPartes.innerHTML = `<tr><td colspan="5" class="mensaje-tabla">${resultado.error || "No se pudo cargar la informacion."}</td></tr>`;
+      tablaPartes.innerHTML = `<tr><td colspan="5" class="mensaje-tabla">${resultado.error || "No se pudo cargar la información."}</td></tr>`;
       if (respuesta.status === 401) {
         localStorage.clear();
         linkLogin.classList.remove("oculto");
@@ -111,7 +111,7 @@ async function cargarPartes(busqueda = "") {
   }
 }
 
-/** Carga catalogos de MP y respondientes para el formulario anterior. */
+/** Carga catálogos de MP y respondientes para el formulario anterior. */
 async function cargarCatalogos() {
   if (!token) return;
 
@@ -124,7 +124,7 @@ async function cargarCatalogos() {
     if (!respuesta.ok) return;
 
     mpParte.innerHTML = '<option value="">Selecciona un MP</option>';
-    respondienteParte.innerHTML = '<option value="">Selecciona un Respondiente</option>';
+    respondienteParte.innerHTML = '<option value="">Selecciona un respondiente</option>';
 
     resultado.data.ministerios.forEach((mp) => {
       mpParte.innerHTML += `<option value="${mp.id_mp}">${mp.nombre}</option>`;
@@ -186,7 +186,7 @@ function crearCarro() {
         <div>
           <h4>Personas involucradas</h4>
           <label class="carro-campo">No. Personas
-            <input type="number" min="0" name="numero_personas" placeholder="Numero de personas" />
+            <input type="number" min="0" name="numero_personas" placeholder="Número de personas" />
           </label>
         </div>
         <div>
@@ -206,8 +206,8 @@ function crearCarro() {
         </div>
         <div>
           <h4>Personas heridas</h4>
-          <label class="carro-campo">Cuantas personas hubo heridas?
-            <input type="number" min="0" name="numero_heridos" placeholder="Numero de personas heridas" />
+          <label class="carro-campo">¿Cuántas personas hubo heridas?
+            <input type="number" min="0" name="numero_heridos" placeholder="Número de personas heridas" />
           </label>
           <h4>Gravedad</h4>
           <div class="gravedad-grid">
@@ -229,8 +229,8 @@ function abrirModalParte() {
   if (!token) {
     Swal.fire({
       icon: "warning",
-      title: "Inicia sesion",
-      text: "Necesitas iniciar sesion para crear un parte.",
+      title: "Inicia sesión",
+      text: "Necesitas iniciar sesión para crear un parte.",
       confirmButtonColor: "#030b5d",
     }).then(() => {
       window.location.href = "/registroUsuarios/login.html";
@@ -310,7 +310,7 @@ async function guardarParte(e) {
       Swal.fire({
         icon: "error",
         title: "No se pudo crear",
-        text: resultado.error || "Revisa la informacion del parte.",
+        text: resultado.error || "Revisa la información del parte.",
         confirmButtonColor: "#030b5d",
       });
       return;
@@ -352,14 +352,14 @@ function alternarDesplegable(panel) {
   if (!estabaAbierto) panel.classList.add("abierto");
 }
 
-/** Confirma el cierre de sesion, limpia datos locales y vuelve al login. */
+/** Confirma el cierre de sesión, limpia datos locales y vuelve al login. */
 function cerrarSesion() {
   Swal.fire({
-    title: "Cerrar sesion",
-    text: "Tu sesion actual se cerrara.",
+    title: "Cerrar sesión",
+    text: "Tu sesión actual se cerrará.",
     icon: "question",
     showCancelButton: true,
-    confirmButtonText: "Cerrar sesion",
+    confirmButtonText: "Cerrar sesión",
     cancelButtonText: "Cancelar",
     confirmButtonColor: "#030b5d",
   }).then((result) => {

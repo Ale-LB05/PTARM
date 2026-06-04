@@ -33,13 +33,13 @@ function renderHomePage() {
   homeRows.innerHTML = visible.map((parte) => `
     <tr>
       <td>${parte.folio || ""}</td>
-      <td><a class="link" href="/partes.html">${parte.respondiente_nombre || "Parte de Transito"}</a></td>
+      <td><a class="link" href="/partes.html">${parte.respondiente_nombre || "Parte de tránsito"}</a></td>
       <td>${formatDate(parte.fecha)}</td>
       <td>${parte.encargado_nombre || "Sin asignar"}</td>
     </tr>
   `).join("") || `<tr><td colspan="4">No hay partes registrados.</td></tr>`;
 
-  homePageInfo.textContent = `Pagina ${homePage} de ${totalPages}`;
+  homePageInfo.textContent = `Página ${homePage} de ${totalPages}`;
   homePrevPage.disabled = homePage <= 1;
   homeNextPage.disabled = homePage >= totalPages;
 }

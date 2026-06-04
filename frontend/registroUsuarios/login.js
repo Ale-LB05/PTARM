@@ -33,8 +33,8 @@ formLogin.addEventListener("submit", async (e) => {
     if (!respuesta.ok) {
       Swal.fire({
         icon: "error",
-        title: "No se pudo iniciar sesion",
-        text: resultado.error || "Revisa tu correo y contrasena.",
+        title: "No se pudo iniciar sesión",
+        text: resultado.error || "Revisa tu correo y contraseña.",
         confirmButtonColor: "#030b5d",
       });
       passwordInput.value = "";
@@ -51,7 +51,7 @@ formLogin.addEventListener("submit", async (e) => {
 
     Swal.fire({
       icon: "success",
-      title: "Inicio de sesion exitoso",
+      title: "Inicio de sesión exitoso",
       text: `Bienvenido, ${resultado.usuario}`,
       timer: 1200,
       showConfirmButton: false,

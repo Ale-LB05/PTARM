@@ -13,7 +13,7 @@ const openEmailModal = document.getElementById("openEmailModal");
 const openPasswordModal = document.getElementById("openPasswordModal");
 const defaultPhoto = "/img/usuario.png";
 
-/** Carga la informacion del perfil y los partes relacionados con el usuario. */
+/** Carga la información del perfil y los partes relacionados con el usuario. */
 async function loadProfile() {
   const data = await api("/api/perfil");
   if (!data?.success) {
@@ -24,7 +24,7 @@ async function loadProfile() {
   profileName.textContent = user.nombre || "Sin nombre";
   profileEmail.textContent = user.correo || "Sin correo registrado";
   profileCargo.textContent = user.cargo_grado || "Sin cargo";
-  profileInstitute.textContent = user.instituto || "Sin institucion";
+  profileInstitute.textContent = user.instituto || "Sin institución";
   emailForm.correo.value = user.correo || "";
   photo.src = user.imagen_perfil || defaultPhoto;
   updateStoredUser({
@@ -36,7 +36,7 @@ async function loadProfile() {
     foto: user.imagen_perfil || defaultPhoto,
   });
   rows.innerHTML = data.data.partes.map((parte) => `
-    <tr><td>${parte.folio}</td><td>${parte.respondiente_nombre || "Parte de transito"}</td><td>${parte.gravedad_general}</td><td>${formatDate(parte.fecha)}</td><td>${parte.mp_nombre || ""}</td></tr>
+    <tr><td>${parte.folio}</td><td>${parte.respondiente_nombre || "Parte de tránsito"}</td><td>${parte.gravedad_general}</td><td>${formatDate(parte.fecha)}</td><td>${parte.mp_nombre || ""}</td></tr>
   `).join("") || `<tr><td colspan="5">Aun no hay partes creados o asignados.</td></tr>`;
 }
 
@@ -51,7 +51,7 @@ openEmailModal.addEventListener("click", () => {
   document.getElementById("emailModal").classList.add("show");
 });
 
-// Abre el modal para cambiar solo la contrasena del usuario.
+// Abre el modal para cambiar solo la contraseña del usuario.
 openPasswordModal.addEventListener("click", () => {
   passwordForm.reset();
   document.getElementById("passwordModal").classList.add("show");
@@ -72,7 +72,7 @@ emailForm.addEventListener("submit", async (event) => {
   }
 });
 
-// Envia el cambio de contrasena despues de validar los campos en backend.
+// Envía el cambio de contraseña después de validar los campos en backend.
 passwordForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const payload = Object.fromEntries(new FormData(passwordForm));
@@ -80,13 +80,13 @@ passwordForm.addEventListener("submit", async (event) => {
   if (data?.success) {
     passwordForm.reset();
     closeProfileModal("passwordModal");
-    showToast(data.message || "Contrasena actualizada");
+    showToast(data.message || "Contraseña actualizada");
   } else {
-    showToast(data?.error || "No se pudo actualizar la contrasena", "error");
+    showToast(data?.error || "No se pudo actualizar la contraseña", "error");
   }
 });
 
-// Permite mostrar u ocultar temporalmente los campos de contrasena.
+// Permite mostrar u ocultar temporalmente los campos de contraseña.
 document.querySelectorAll(".toggle-secret").forEach((button) => {
   button.addEventListener("click", () => {
     const input = button.parentElement.querySelector("input");

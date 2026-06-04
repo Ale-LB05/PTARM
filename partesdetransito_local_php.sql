@@ -109,6 +109,8 @@ CREATE TABLE `personas_involucradas` (
   `id_vehiculo` bigint(20) DEFAULT NULL,
   `numero_personas` int(11) DEFAULT NULL,
   `personas_fallecidas` tinyint(1) NOT NULL DEFAULT 0,
+  `numero_fallecidos` int(11) DEFAULT NULL,
+  `observacion_fallecidos` text DEFAULT NULL,
   `personas_heridas` tinyint(1) NOT NULL DEFAULT 0,
   `otros` tinyint(1) NOT NULL DEFAULT 0,
   `numero_heridos` int(11) DEFAULT NULL,
@@ -137,6 +139,13 @@ CREATE TABLE `historial_cambios` (
   `accion` enum('CREAR','EDITAR','ELIMINAR','CONSULTAR','EXPORTAR') NOT NULL,
   `descripcion` text DEFAULT NULL,
   `fecha` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `notificaciones_vistas` (
+  `id_vista` bigint(20) NOT NULL,
+  `id_usuario` int(11) NOT NULL,
+  `id_historial` bigint(20) NOT NULL,
+  `fecha_visto` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
@@ -192,6 +201,12 @@ ALTER TABLE `historial_cambios`
   ADD KEY `idx_historial_parte` (`id_parte`),
   ADD KEY `idx_historial_usuario` (`id_usuario`);
 
+ALTER TABLE `notificaciones_vistas`
+  ADD PRIMARY KEY (`id_vista`),
+  ADD UNIQUE KEY `uk_notificaciones_usuario_historial` (`id_usuario`, `id_historial`),
+  ADD KEY `idx_notificaciones_usuario` (`id_usuario`),
+  ADD KEY `idx_notificaciones_historial` (`id_historial`);
+
 -- --------------------------------------------------------
 -- AUTO_INCREMENT
 -- --------------------------------------------------------
@@ -205,6 +220,7 @@ ALTER TABLE `vehiculos` MODIFY `id_vehiculo` bigint(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `personas_involucradas` MODIFY `id_personas_involucradas` bigint(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `exportaciones` MODIFY `id_exportacion` bigint(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `historial_cambios` MODIFY `id_historial` bigint(20) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `notificaciones_vistas` MODIFY `id_vista` bigint(20) NOT NULL AUTO_INCREMENT;
 
 -- --------------------------------------------------------
 -- Relaciones
@@ -233,6 +249,10 @@ ALTER TABLE `exportaciones`
 ALTER TABLE `historial_cambios`
   ADD CONSTRAINT `fk_historial_parte` FOREIGN KEY (`id_parte`) REFERENCES `partes` (`id_parte`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_historial_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `notificaciones_vistas`
+  ADD CONSTRAINT `fk_notificaciones_vistas_historial` FOREIGN KEY (`id_historial`) REFERENCES `historial_cambios` (`id_historial`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_notificaciones_vistas_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 COMMIT;
 

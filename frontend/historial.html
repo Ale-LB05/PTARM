@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Historial | Partes de transito</title>
+    <title>Historial | PTARM</title>
     <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="/css/styles.css" />
@@ -12,16 +12,16 @@
   <body>
     <div class="app-shell">
       <aside class="sidebar">
-        <a class="side-brand" href="/inicio.html"
-          ><span class="brand-icon"><img src="/img/iconos/menu.png" alt="" /></span
-          ><span class="brand-text">Menu</span></a
-        >
+        <a class="side-brand" href="/inicio.html">
+          <span class="brand-icon"><img src="/img/logot.png" alt="PTARM" /></span>
+          <span class="brand-text">PTARM</span>
+        </a>
         <nav class="side-nav">
           <a data-page="inicio" href="/inicio.html"
             ><span class="nav-icon"><img src="/img/iconos/Inicio.png" alt="" /></span
             ><span>Inicio</span></a
           >
-          <div class="side-section">Administracion</div>
+          <div class="side-section">Administración</div>
           <a data-page="personal" href="/personal.html"
             ><span class="nav-icon"><img src="/img/iconos/personal.png" alt="" /></span
             ><span>Personal</span></a
@@ -33,10 +33,10 @@
             ><span class="nav-icon"><img src="/img/iconos/historial.png" alt="" /></span
             ><span>Historial</span></a
           >
-          <div class="side-section">Sesion</div>
+          <div class="side-section">Sesión</div>
           <button onclick="logout()">
             <span class="nav-icon"><img src="/img/iconos/salida.png" alt="" /></span
-            ><span>Cerrar sesion</span></button
+            ><span>Cerrar sesión</span></button
           ><button class="collapse-btn" onclick="toggleSidebar()">
             <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
             ><span>Ocultar</span>
@@ -45,9 +45,10 @@
       </aside>
       <main class="content">
         <header class="topbar">
-          <a href="/inicio.html"
-            ><img class="logo" src="/img/Logo.png" alt="FGE"
-          /></a>
+          <a class="topbar-brand" href="/inicio.html">
+            <img class="logo" src="/img/Logo.png" alt="FGE" />
+            <span>Sistema de partes</span>
+          </a>
           <div class="user-menu">
             <button class="user-top" type="button">
               <i class="fas fa-bell"></i><span data-user-name></span
@@ -93,11 +94,11 @@
               </select></label
             >
             <div class="pager">
-              <button class="btn icon-only" id="historyPrevPage" type="button" title="Pagina anterior">
+              <button class="btn icon-only" id="historyPrevPage" type="button" title="Página anterior">
                 <i class="fas fa-chevron-left"></i>
               </button>
               <span id="historyPageInfo"></span>
-              <button class="btn icon-only" id="historyNextPage" type="button" title="Pagina siguiente">
+              <button class="btn icon-only" id="historyNextPage" type="button" title="Página siguiente">
                 <i class="fas fa-chevron-right"></i>
               </button>
             </div>
