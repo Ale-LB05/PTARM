@@ -10,11 +10,22 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => cb(null, `${Date.now()}_${file.originalname}`),
 });
 const upload = multer({ storage });
+let userCurpColumnReady = false;
+
+async function ensureUserCurpColumn() {
+  if (userCurpColumnReady) return;
+  const [columns] = await db.query("SHOW COLUMNS FROM usuarios");
+  if (!columns.some((column) => column.Field === "curp")) {
+    await db.query("ALTER TABLE usuarios ADD COLUMN curp varchar(18) DEFAULT NULL AFTER correo");
+  }
+  userCurpColumnReady = true;
+}
 
 // Devuelve los datos del usuario actual y sus ultimos partes creados/asignados.
 router.get("/", async (req, res) => {
+  await ensureUserCurpColumn();
   const [[usuario]] = await db.query(
-    `SELECT u.id_usuario, u.nombre, u.correo, u.instituto, u.cargo_grado, u.imagen_perfil, r.nombre AS rol
+    `SELECT u.id_usuario, u.nombre, u.correo, u.curp, u.instituto, u.cargo_grado, u.imagen_perfil, r.nombre AS rol
      FROM usuarios u
      INNER JOIN roles r ON r.id_rol = u.id_rol
      WHERE u.id_usuario = ?`,
@@ -37,6 +48,7 @@ router.get("/", async (req, res) => {
 
 // Actualiza solo el correo desde el modal de perfil.
 router.patch("/correo", async (req, res) => {
+  await ensureUserCurpColumn();
   const correo = String(req.body.correo || "").trim();
   if (!correo) return res.status(400).json({ success: false, error: "Ingresa un correo valido" });
 
@@ -46,6 +58,19 @@ router.patch("/correo", async (req, res) => {
     success: true,
     message: "Correo actualizado",
     usuario: { correo },
+  });
+});
+
+// Actualiza solo la CURP desde el modal de perfil.
+router.patch("/curp", async (req, res) => {
+  await ensureUserCurpColumn();
+  const curp = String(req.body.curp || "").trim().toUpperCase();
+  await db.query("UPDATE usuarios SET curp = ? WHERE id_usuario = ?", [curp || null, req.user.id]);
+
+  res.json({
+    success: true,
+    message: "CURP actualizada",
+    usuario: { curp },
   });
 });
 
@@ -69,9 +94,10 @@ router.patch("/password", async (req, res) => {
 
 // Ruta anterior para actualizar varios datos del perfil, conservada por compatibilidad.
 router.post("/", upload.single("imagen"), async (req, res) => {
-  const { nombre, correo, password, instituto, cargo_grado } = req.body;
-  const fields = ["nombre = ?", "correo = ?", "instituto = ?", "cargo_grado = ?"];
-  const params = [nombre, correo, instituto || null, cargo_grado || null];
+  await ensureUserCurpColumn();
+  const { nombre, correo, curp, password, instituto, cargo_grado } = req.body;
+  const fields = ["nombre = ?", "correo = ?", "curp = ?", "instituto = ?", "cargo_grado = ?"];
+  const params = [nombre, correo, curp ? String(curp).trim().toUpperCase() : null, instituto || null, cargo_grado || null];
 
   if (password) {
     fields.push("password_hash = ?");
@@ -86,7 +112,7 @@ router.post("/", upload.single("imagen"), async (req, res) => {
   await db.query(`UPDATE usuarios SET ${fields.join(", ")} WHERE id_usuario = ?`, params);
 
   const [[usuario]] = await db.query(
-    `SELECT u.id_usuario AS id, u.nombre, u.correo, u.instituto, u.cargo_grado AS cargo, u.imagen_perfil AS foto, r.nombre AS rol
+    `SELECT u.id_usuario AS id, u.nombre, u.correo, u.curp, u.instituto, u.cargo_grado AS cargo, u.imagen_perfil AS foto, r.nombre AS rol
      FROM usuarios u
      INNER JOIN roles r ON r.id_rol = u.id_rol
      WHERE u.id_usuario = ?`,

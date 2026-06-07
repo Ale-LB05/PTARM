@@ -3,6 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const root = document.documentElement;
+        root.classList.add("booting");
+        try {
+          const isDark = localStorage.getItem("theme") === "dark";
+          root.dataset.theme = isDark ? "dark" : "light";
+          root.classList.toggle("theme-dark", isDark);
+        } catch (_) {
+          root.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <style>
+      html.booting[data-theme="dark"],
+      html.booting[data-theme="dark"] body {
+        background: #0b1220;
+      }
+    </style>
     <title>Crear administrador</title>
     <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
@@ -17,6 +36,7 @@
       <form id="setupForm">
         <input type="text" name="nombre" placeholder="Nombre completo" required />
         <input type="email" name="correo" placeholder="correo@dominio.com" required />
+        <input type="text" name="curp" maxlength="18" placeholder="CURP" />
         <input type="password" name="password" placeholder="Contraseña" required />
         <input type="text" name="instituto" placeholder="Instituto" />
         <input type="text" name="cargo_grado" placeholder="Cargo/Grado" />

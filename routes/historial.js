@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const { requireRole } = require("../middleware/auth");
+const { ensureActivityTable } = require("../utils/activity");
 
 const router = express.Router();
 router.use(requireRole("Administrador", "Capturista", "Auxiliar"));
@@ -67,6 +68,73 @@ router.get("/notificaciones", async (req, res) => {
     console.error("Error al cargar notificaciones", error);
     return res.status(500).json({ success: false, error: "No se pudieron cargar las notificaciones" });
   }
+});
+
+// Resume actividad mensual para graficas, porcentajes y tabla de estadisticas.
+router.get("/estadisticas", async (req, res) => {
+  await ensureActivityTable();
+  const today = new Date();
+  const year = Number(req.query.anio) || today.getFullYear();
+  const month = Math.min(Math.max(Number(req.query.mes) || today.getMonth() + 1, 1), 12);
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const endDate = new Date(year, month, 1);
+  const end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+  const [eventRows] = await db.query(
+    `SELECT tipo_evento, COUNT(*) AS total
+     FROM actividad_sistema
+     WHERE fecha >= ? AND fecha < ?
+     GROUP BY tipo_evento
+     ORDER BY total DESC, tipo_evento`,
+    [start, end],
+  );
+  const [dailyRows] = await db.query(
+    `SELECT DATE(fecha) AS dia, COUNT(*) AS total
+     FROM actividad_sistema
+     WHERE fecha >= ? AND fecha < ?
+     GROUP BY DATE(fecha)
+     ORDER BY dia`,
+    [start, end],
+  );
+  const [userRows] = await db.query(
+    `SELECT u.nombre, COUNT(*) AS total
+     FROM actividad_sistema a
+     LEFT JOIN usuarios u ON u.id_usuario = a.id_usuario
+     WHERE a.fecha >= ? AND a.fecha < ? AND a.id_usuario IS NOT NULL
+     GROUP BY a.id_usuario, u.nombre
+     ORDER BY total DESC
+     LIMIT 5`,
+    [start, end],
+  );
+
+  const labels = {
+    CREACION_PARTE: "Partes creados",
+    EDICION_PARTE: "Partes editados",
+    ELIMINACION_PARTE: "Partes eliminados",
+    CREACION_USUARIO: "Usuarios creados",
+    LOGIN: "Inicios de sesion",
+    EXPORTACION: "Exportaciones",
+  };
+  const total = eventRows.reduce((sum, row) => sum + Number(row.total), 0);
+  const eventos = eventRows.map((row) => ({
+    tipo: row.tipo_evento,
+    etiqueta: labels[row.tipo_evento] || row.tipo_evento,
+    total: Number(row.total),
+    porcentaje: total ? Number(((Number(row.total) / total) * 100).toFixed(1)) : 0,
+  }));
+
+  res.json({
+    success: true,
+    data: {
+      mes: month,
+      anio: year,
+      total,
+      eventos,
+      dias: dailyRows.map((row) => ({ dia: row.dia, total: Number(row.total) })),
+      usuarios: userRows.map((row) => ({ nombre: row.nombre || "Usuario no disponible", total: Number(row.total) })),
+      actividad_principal: eventos[0] || null,
+    },
+  });
 });
 
 // Lista movimientos del historial con filtros por accion, folio, usuario, MP o fecha.

@@ -3,6 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const root = document.documentElement;
+        root.classList.add("booting");
+        try {
+          const isDark = localStorage.getItem("theme") === "dark";
+          root.dataset.theme = isDark ? "dark" : "light";
+          root.classList.toggle("theme-dark", isDark);
+          root.classList.toggle("sidebar-start-collapsed", localStorage.getItem("sidebarCollapsed") === "1");
+        } catch (_) {
+          root.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <style>
+      html.booting[data-theme="dark"],
+      html.booting[data-theme="dark"] body {
+        background: #0b1220;
+      }
+    </style>
     <title>Partes | PTARM</title>
     <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
@@ -69,6 +89,13 @@
                 class="search"
                 placeholder="Buscar partes"
               /><button
+                class="btn blue outline advanced-search-trigger"
+                id="advancedSearchBtn"
+                type="button"
+                title="Búsqueda avanzada"
+              >
+                <i class="fas fa-search-plus"></i> Avanzada</button
+              ><button
                 class="btn icon-only view-toggle active"
                 id="listViewBtn"
                 type="button"
@@ -91,6 +118,7 @@
               </button>
             </div>
           </div>
+          <div id="advancedSearchSummary" class="advanced-search-summary" hidden></div>
           <div class="table-controls compact">
             <label class="inline-check"
               >Mostrar
@@ -179,13 +207,51 @@
                 <label
                   >No. personas<input
                     type="number"
+                    min="0"
                     name="numero_personas"
                     placeholder="Número de personas" /></label
-                ><label
-                  >No. vehículo<select name="id_vehiculo_personas" id="vehiclePersonSelect">
-                    <option>Selecciona un carro</option>
-                  </select></label
                 >
+              </div>
+              <div id="peopleAssignmentPanel" class="people-assignment-panel" hidden>
+                <div class="people-assignment-head">
+                  <strong>Listado de personas</strong>
+                  <button class="btn blue outline" id="togglePeopleTableBtn" type="button">
+                    <i class="fas fa-eye-slash"></i> Ocultar tabla
+                  </button>
+                </div>
+                <div id="peopleAssignmentTableWrap" class="people-assignment-table-wrap">
+                  <div class="people-table-controls">
+                    <label class="inline-check"
+                      >Mostrar
+                      <select id="peoplePageSize">
+                        <option value="5">5 personas</option>
+                        <option value="10">10 personas</option>
+                        <option value="20">20 personas</option>
+                        <option value="50">50 personas</option>
+                      </select></label
+                    >
+                    <div class="pager compact-pager">
+                      <button class="btn icon-only" id="peoplePrevPage" type="button" title="Página anterior">
+                        <i class="fas fa-chevron-left"></i>
+                      </button>
+                      <span id="peoplePageInfo"></span>
+                      <button class="btn icon-only" id="peopleNextPage" type="button" title="Página siguiente">
+                        <i class="fas fa-chevron-right"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <table class="people-assignment-table">
+                    <thead>
+                      <tr>
+                        <th>Persona</th>
+                        <th>Nombre</th>
+                        <th>Vehículo</th>
+                        <th>Participación</th>
+                      </tr>
+                    </thead>
+                    <tbody id="peopleAssignmentRows"></tbody>
+                  </table>
+                </div>
               </div>
               <div>
                 <strong>Complementos</strong>
@@ -304,6 +370,66 @@
           </button>
         </div>
         <div class="modal-body" id="partDetailBody"></div>
+      </div>
+    </div>
+
+    <div id="advancedSearchModal" class="modal-backdrop">
+      <div class="modal advanced-search-modal">
+        <div class="modal-title">
+          <h2><i class="fas fa-search-plus"></i> Búsqueda avanzada</h2>
+          <button class="modal-close" onclick="closeModal('advancedSearchModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="advancedSearchForm" class="modal-body">
+          <div class="advanced-search-intro">
+            <strong>Filtrar partes por apartado</strong>
+            <span>Agrega uno o más filtros y se mostrarán solo los partes que cumplan todos.</span>
+          </div>
+          <div id="advancedFilterList" class="advanced-filter-list" hidden></div>
+          <div class="form-grid cols-2 advanced-search-grid">
+            <label
+              >Apartado
+              <select id="advancedSearchField" required>
+                <option value="">Selecciona un apartado</option>
+                <option value="folio">No. parte / folio</option>
+                <option value="fecha">Fecha</option>
+                <option value="hora">Hora</option>
+                <option value="estado">Estado</option>
+                <option value="gravedad">Gravedad</option>
+                <option value="mp">MP asignado</option>
+                <option value="respondiente">Respondiente</option>
+                <option value="encargado">Usuario encargado</option>
+                <option value="placa">No. placa</option>
+                <option value="serie">No. serie</option>
+                <option value="marca">Marca del vehículo</option>
+                <option value="modelo">Modelo del vehículo</option>
+              </select></label
+            ><label
+              >Dato a buscar
+              <input
+                id="advancedSearchValue"
+                list="advancedSearchOptions"
+                placeholder="Escribe el dato..."
+                required
+              />
+              <datalist id="advancedSearchOptions"></datalist></label
+            >
+          </div>
+          <div class="advanced-search-hint">
+            <i class="fas fa-info-circle"></i>
+            <span>Cuando agregues un filtro aparecerá listo el espacio para colocar otro.</span>
+          </div>
+          <div class="modal-actions">
+            <button class="btn red outline" type="button" id="clearAdvancedSearchBtn">
+              Limpiar búsqueda</button
+            ><button class="btn blue outline" type="button" id="addAdvancedFilterBtn">
+              <i class="fas fa-plus"></i> Agregar filtro</button
+            ><button class="btn green" type="submit">
+              <i class="fas fa-search"></i> Buscar
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 

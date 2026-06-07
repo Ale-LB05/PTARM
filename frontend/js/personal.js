@@ -50,7 +50,7 @@ async function loadUsers() {
     return;
   }
   const q = (search.value || "").toLowerCase();
-  users = data.data.filter((u) => `${u.nombre} ${u.rol} ${u.correo}`.toLowerCase().includes(q));
+  users = data.data.filter((u) => `${u.nombre} ${u.rol} ${u.correo} ${u.curp || ""}`.toLowerCase().includes(q));
   userPage = 1;
   renderUsers();
 }
@@ -166,6 +166,7 @@ function openUserModal(mode, id = null) {
   if (user) {
     form.nombre.value = user.nombre || "";
     form.correo.value = user.correo || "";
+    form.curp.value = user.curp || "";
     form.instituto.value = user.instituto || "";
     form.cargo_grado.value = user.cargo_grado || "";
     form.id_rol.value = user.id_rol || 2;

@@ -5,12 +5,16 @@ const photo = document.getElementById("profilePhoto");
 const rows = document.getElementById("profilePartes");
 const profileName = document.getElementById("profileName");
 const profileEmail = document.getElementById("profileEmail");
+const profileCurp = document.getElementById("profileCurp");
 const profileCargo = document.getElementById("profileCargo");
 const profileInstitute = document.getElementById("profileInstitute");
 const emailForm = document.getElementById("emailForm");
+const curpForm = document.getElementById("curpForm");
 const passwordForm = document.getElementById("passwordForm");
 const openEmailModal = document.getElementById("openEmailModal");
+const openCurpModal = document.getElementById("openCurpModal");
 const openPasswordModal = document.getElementById("openPasswordModal");
+const themeToggleBtn = document.getElementById("themeToggleBtn");
 const defaultPhoto = "/img/usuario.png";
 
 /** Carga la información del perfil y los partes relacionados con el usuario. */
@@ -23,13 +27,16 @@ async function loadProfile() {
   const user = data.data.usuario;
   profileName.textContent = user.nombre || "Sin nombre";
   profileEmail.textContent = user.correo || "Sin correo registrado";
+  profileCurp.textContent = user.curp || "Sin CURP registrada";
   profileCargo.textContent = user.cargo_grado || "Sin cargo";
   profileInstitute.textContent = user.instituto || "Sin institución";
   emailForm.correo.value = user.correo || "";
+  curpForm.curp.value = user.curp || "";
   photo.src = user.imagen_perfil || defaultPhoto;
   updateStoredUser({
     nombre: user.nombre || "",
     correo: user.correo || "",
+    curp: user.curp || "",
     instituto: user.instituto || "",
     cargo: user.cargo_grado || "",
     rol: user.rol || "",
@@ -51,6 +58,12 @@ openEmailModal.addEventListener("click", () => {
   document.getElementById("emailModal").classList.add("show");
 });
 
+// Abre el modal para actualizar solo la CURP del usuario.
+openCurpModal.addEventListener("click", () => {
+  curpForm.curp.value = profileCurp.textContent === "Sin CURP registrada" ? "" : profileCurp.textContent;
+  document.getElementById("curpModal").classList.add("show");
+});
+
 // Abre el modal para cambiar solo la contraseña del usuario.
 openPasswordModal.addEventListener("click", () => {
   passwordForm.reset();
@@ -69,6 +82,21 @@ emailForm.addEventListener("submit", async (event) => {
     showToast(data.message || "Correo actualizado");
   } else {
     showToast(data?.error || "No se pudo actualizar el correo", "error");
+  }
+});
+
+// Guarda la nueva CURP en la API.
+curpForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const curp = curpForm.curp.value.trim().toUpperCase();
+  const data = await api("/api/perfil/curp", { method: "PATCH", body: JSON.stringify({ curp }) });
+  if (data?.success) {
+    profileCurp.textContent = curp || "Sin CURP registrada";
+    updateStoredUser({ curp });
+    closeProfileModal("curpModal");
+    showToast(data.message || "CURP actualizada");
+  } else {
+    showToast(data?.error || "No se pudo actualizar la CURP", "error");
   }
 });
 
@@ -98,6 +126,17 @@ document.querySelectorAll(".toggle-secret").forEach((button) => {
 
 form.addEventListener("submit", (event) => event.preventDefault());
 
+/** Actualiza el boton del tema segun el modo actual. */
+function syncThemeButton() {
+  const isDark = document.documentElement.dataset.theme === "dark";
+  themeToggleBtn.innerHTML = `<i class="fas ${isDark ? "fa-sun" : "fa-moon"}"></i> ${isDark ? "Modo claro" : "Modo oscuro"}`;
+}
+
+themeToggleBtn.addEventListener("click", () => {
+  toggleTheme();
+  syncThemeButton();
+});
+
 /** Sincroniza localStorage y la barra superior con los cambios del perfil. */
 function updateStoredUser(changes) {
   const current = getUser();
@@ -124,4 +163,5 @@ function formatDate(value) {
   return String(value).slice(0, 10);
 }
 
+syncThemeButton();
 loadProfile();

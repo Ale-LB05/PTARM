@@ -1,9 +1,11 @@
 const express = require("express");
 const db = require("../db");
 const { canAccess } = require("../middleware/auth");
+const { recordActivity } = require("../utils/activity");
 
 const router = express.Router();
 let peopleExtraColumnsReady = false;
+let peopleDetailTableReady = false;
 
 /** Asegura columnas para guardar datos especificos de fallecidos en bases existentes. */
 async function ensurePeopleExtraColumns() {
@@ -17,6 +19,32 @@ async function ensurePeopleExtraColumns() {
     await db.query("ALTER TABLE personas_involucradas ADD COLUMN observacion_fallecidos text DEFAULT NULL AFTER numero_fallecidos");
   }
   peopleExtraColumnsReady = true;
+}
+
+/** Asegura tabla para guardar cada persona involucrada de forma individual. */
+async function ensurePeopleDetailTable() {
+  if (peopleDetailTableReady) return;
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS personas_involucradas_detalle (
+      id_persona_detalle bigint(20) NOT NULL AUTO_INCREMENT,
+      id_parte bigint(20) NOT NULL,
+      id_vehiculo bigint(20) DEFAULT NULL,
+      numero_vehiculo int(11) DEFAULT NULL,
+      numero_persona int(11) NOT NULL,
+      nombre varchar(180) DEFAULT NULL,
+      tipo_participacion enum('Conductor','Pasajero','Civil') NOT NULL DEFAULT 'Civil',
+      PRIMARY KEY (id_persona_detalle),
+      KEY idx_personas_detalle_parte (id_parte),
+      KEY idx_personas_detalle_vehiculo (id_vehiculo),
+      CONSTRAINT fk_personas_detalle_parte FOREIGN KEY (id_parte) REFERENCES partes (id_parte) ON DELETE CASCADE ON UPDATE CASCADE,
+      CONSTRAINT fk_personas_detalle_vehiculo FOREIGN KEY (id_vehiculo) REFERENCES vehiculos (id_vehiculo) ON DELETE SET NULL ON UPDATE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  );
+  const [columns] = await db.query("SHOW COLUMNS FROM personas_involucradas_detalle");
+  if (!columns.some((column) => column.Field === "numero_vehiculo")) {
+    await db.query("ALTER TABLE personas_involucradas_detalle ADD COLUMN numero_vehiculo int(11) DEFAULT NULL AFTER id_vehiculo");
+  }
+  peopleDetailTableReady = true;
 }
 
 /** Permite modificar partes solo a Administrador y Capturista. */
@@ -56,6 +84,7 @@ async function findOrCreate(table, idColumn, nombre) {
 /** Obtiene un parte completo con MP, respondiente, encargado, personas y vehiculos. */
 async function getPartById(id) {
   await ensurePeopleExtraColumns();
+  await ensurePeopleDetailTable();
   const [rows] = await db.query(
     `SELECT
        p.*,
@@ -92,6 +121,32 @@ async function getPartById(id) {
     [id],
   );
   parte.vehiculos = vehiculos;
+  const [personasDetalle] = await db.query(
+    `SELECT
+       pd.id_persona_detalle,
+       pd.numero_persona,
+       pd.nombre,
+       pd.tipo_participacion,
+       pd.id_vehiculo,
+       COALESCE(v.numero_vehiculo, pd.numero_vehiculo) AS numero_vehiculo,
+       CONCAT(
+         'Vehículo #', COALESCE(v.numero_vehiculo, pd.numero_vehiculo),
+         CASE
+           WHEN v.marca IS NULL AND v.modelo IS NULL AND v.tipo IS NULL AND v.numero_placa IS NULL THEN ''
+           ELSE CONCAT(' - ', TRIM(CONCAT_WS(' / ', v.marca, v.modelo, v.tipo, IF(v.numero_placa IS NULL OR v.numero_placa = '', NULL, CONCAT('Placa ', v.numero_placa)))))
+         END
+       ) AS vehiculo_label
+     FROM personas_involucradas_detalle pd
+     LEFT JOIN vehiculos v ON v.id_vehiculo = pd.id_vehiculo
+     WHERE pd.id_parte = ?
+     ORDER BY pd.numero_persona, pd.id_persona_detalle`,
+    [id],
+  );
+  parte.personas_detalle = personasDetalle.map((person) => ({
+    ...person,
+    numero_vehiculo: person.numero_vehiculo,
+    vehiculo_label: person.id_vehiculo ? person.vehiculo_label : "Sin vehículo",
+  }));
   const firstVehicle = vehiculos[0];
   if (firstVehicle) {
     parte.id_vehiculo = firstVehicle.id_vehiculo;
@@ -106,12 +161,41 @@ async function getPartById(id) {
 
 // Lista partes resumidos para tablas, tarjetas, inicio y modal de exportacion.
 router.get("/", async (req, res) => {
-  const q = `%${(req.query.q || "").trim()}%`;
-  const hasSearch = q !== "%%";
-  const params = hasSearch ? [q, q, q, q, q, q] : [];
-  const where = hasSearch
+  const advancedFields = {
+    folio: "p.folio",
+    fecha: "p.fecha",
+    hora: "p.hora",
+    estado: "p.estado",
+    gravedad: "p.gravedad_general",
+    mp: "mp.nombre",
+    respondiente: "r.nombre",
+    encargado: "u.nombre",
+    placa: "v.numero_placa",
+    serie: "v.numero_serie",
+    marca: "v.marca",
+    modelo: "v.modelo",
+  };
+  const advancedField = String(req.query.advancedField || "").trim();
+  const advancedValue = String(req.query.advancedValue || "").trim();
+
+  let where = "";
+  let params = [];
+  if (advancedFields[advancedField] && advancedValue) {
+    if (advancedField === "fecha") {
+      where = `WHERE ${advancedFields[advancedField]} = ?`;
+      params = [advancedValue];
+    } else {
+      where = `WHERE ${advancedFields[advancedField]} LIKE ?`;
+      params = [`%${advancedValue}%`];
+    }
+  } else {
+    const q = `%${(req.query.q || "").trim()}%`;
+    const hasSearch = q !== "%%";
+    params = hasSearch ? [q, q, q, q, q, q] : [];
+    where = hasSearch
     ? `WHERE p.folio LIKE ? OR mp.nombre LIKE ? OR r.nombre LIKE ? OR u.nombre LIKE ? OR v.numero_placa LIKE ? OR v.numero_serie LIKE ?`
     : "";
+  }
 
   const [rows] = await db.query(
     `SELECT
@@ -124,7 +208,11 @@ router.get("/", async (req, res) => {
        mp.nombre AS mp_nombre,
        r.nombre AS respondiente_nombre,
        u.nombre AS encargado_nombre,
-       u.imagen_perfil AS encargado_foto
+       u.imagen_perfil AS encargado_foto,
+       GROUP_CONCAT(DISTINCT v.numero_placa SEPARATOR ' | ') AS placas,
+       GROUP_CONCAT(DISTINCT v.numero_serie SEPARATOR ' | ') AS series,
+       GROUP_CONCAT(DISTINCT v.marca SEPARATOR ' | ') AS marcas,
+       GROUP_CONCAT(DISTINCT v.modelo SEPARATOR ' | ') AS modelos
      FROM partes p
      LEFT JOIN ministerios_publicos mp ON mp.id_mp = p.id_mp
      LEFT JOIN respondientes r ON r.id_respondiente = p.id_respondiente
@@ -155,6 +243,7 @@ router.post("/export", requirePartesExport, async (req, res) => {
     req.user.id,
     `Exportacion ${tipo} de ${total} parte(s)`,
   ]);
+  await recordActivity("EXPORTACION", { idUsuario: req.user.id, detalle: `Exportacion ${tipo} de ${total} parte(s)` });
   res.json({ success: true, message: "Exportacion registrada" });
 });
 
@@ -195,6 +284,7 @@ router.post("/", requirePartesWrite, async (req, res) => {
     req.user.id,
     "Parte creado desde Node",
   ]);
+  await recordActivity("CREACION_PARTE", { idUsuario: req.user.id, idParte, detalle: `Parte ${folio} creado` });
 
   res.json({ success: true, message: "Parte creado", id: idParte });
 });
@@ -231,6 +321,7 @@ router.put("/:id", requirePartesWrite, async (req, res) => {
     req.user.id,
     `Parte ${folio} editado desde Node | creado_por:${currentParte?.creado_por || ""}`,
   ]);
+  await recordActivity("EDICION_PARTE", { idUsuario: req.user.id, idParte, detalle: `Parte ${folio} editado` });
 
   res.json({ success: true, message: "Parte actualizado" });
 });
@@ -244,16 +335,20 @@ router.delete("/:id", requirePartesWrite, async (req, res) => {
     `Parte ${parte?.folio || req.params.id} eliminado desde Node | creado_por:${parte?.creado_por || ""}`,
   ]);
   await db.query("DELETE FROM partes WHERE id_parte = ?", [req.params.id]);
+  await recordActivity("ELIMINACION_PARTE", { idUsuario: req.user.id, detalle: `Parte ${parte?.folio || req.params.id} eliminado` });
   res.json({ success: true, message: "Parte eliminado" });
 });
 
 /** Inserta o actualiza vehiculos y personas involucradas de un parte. */
 async function upsertDetails(idParte, data) {
   await ensurePeopleExtraColumns();
+  await ensurePeopleDetailTable();
   const vehiculos = normalizeVehicles(data);
+  await db.query("DELETE FROM personas_involucradas_detalle WHERE id_parte = ?", [idParte]);
   await db.query("DELETE FROM vehiculos WHERE id_parte = ?", [idParte]);
 
   let idVehiculo = null;
+  const vehicleIdsByNumber = new Map();
   for (const [index, vehiculo] of vehiculos.entries()) {
     const [result] = await db.query(
       `INSERT INTO vehiculos (id_parte, numero_vehiculo, marca, modelo, tipo, numero_serie, numero_placa)
@@ -269,6 +364,25 @@ async function upsertDetails(idParte, data) {
       ],
     );
     if (!idVehiculo) idVehiculo = result.insertId;
+    vehicleIdsByNumber.set(index + 1, result.insertId);
+  }
+
+  const personasDetalle = normalizePeopleDetails(data);
+  for (const [index, persona] of personasDetalle.entries()) {
+    const numeroVehiculo = Number(persona.numero_vehiculo);
+    await db.query(
+      `INSERT INTO personas_involucradas_detalle
+       (id_parte, id_vehiculo, numero_vehiculo, numero_persona, nombre, tipo_participacion)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        idParte,
+        vehicleIdsByNumber.get(numeroVehiculo) || null,
+        numeroVehiculo || null,
+        Number(persona.numero_persona) || index + 1,
+        nullable(persona.nombre),
+        ["Conductor", "Pasajero", "Civil"].includes(persona.tipo_participacion) ? persona.tipo_participacion : "Civil",
+      ],
+    );
   }
 
   const [people] = await db.query("SELECT id_personas_involucradas FROM personas_involucradas WHERE id_parte = ? LIMIT 1", [idParte]);
@@ -329,6 +443,28 @@ function normalizeVehicles(data) {
   return vehiculos.filter((vehiculo) =>
     ["marca", "modelo", "tipo", "numero_serie", "numero_placa"].some((key) => nullable(vehiculo[key])),
   );
+}
+
+/** Normaliza el listado individual de personas involucradas. */
+function normalizePeopleDetails(data) {
+  let personas = [];
+  if (Array.isArray(data.personas_detalle)) personas = data.personas_detalle;
+  else if (typeof data.personas_detalle === "string") {
+    try {
+      personas = JSON.parse(data.personas_detalle);
+    } catch {
+      personas = [];
+    }
+  }
+
+  return personas
+    .map((persona, index) => ({
+      numero_persona: Number(persona.numero_persona) || index + 1,
+      nombre: nullable(persona.nombre),
+      numero_vehiculo: Number(persona.numero_vehiculo) || null,
+      tipo_participacion: nullable(persona.tipo_participacion) || "Civil",
+    }))
+    .filter((persona) => persona.nombre || persona.numero_vehiculo || persona.tipo_participacion);
 }
 
 module.exports = router;

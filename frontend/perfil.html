@@ -3,6 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const root = document.documentElement;
+        root.classList.add("booting");
+        try {
+          const isDark = localStorage.getItem("theme") === "dark";
+          root.dataset.theme = isDark ? "dark" : "light";
+          root.classList.toggle("theme-dark", isDark);
+          root.classList.toggle("sidebar-start-collapsed", localStorage.getItem("sidebarCollapsed") === "1");
+        } catch (_) {
+          root.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <style>
+      html.booting[data-theme="dark"],
+      html.booting[data-theme="dark"] body {
+        background: #0b1220;
+      }
+    </style>
     <title>Perfil | PTARM</title>
     <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
@@ -61,7 +81,12 @@
           </div>
         </header>
         <section class="page">
-          <h1>Mi Perfil</h1>
+          <div class="profile-page-head">
+            <h1>Mi Perfil</h1>
+            <button class="btn blue outline theme-toggle-btn" id="themeToggleBtn" type="button">
+              <i class="fas fa-moon"></i> Modo oscuro
+            </button>
+          </div>
           <form id="profileForm" class="profile-layout account-layout">
             <div>
               <img
@@ -91,6 +116,20 @@
                   title="Editar correo"
                 >
                   <i class="fas fa-pen"></i>
+                </button>
+              </div>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>CURP</span>
+                </div>
+                <strong id="profileCurp">Sin CURP registrada</strong>
+                <button
+                  class="account-action"
+                  type="button"
+                  id="openCurpModal"
+                  title="Editar CURP"
+                >
+                  <i class="fas fa-id-card"></i>
                 </button>
               </div>
               <div class="account-row">
@@ -213,6 +252,34 @@
               Cancelar</button
             ><button class="btn teal" type="submit">
               <i class="fas fa-save"></i> Cambiar contraseña
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="curpModal" class="modal-backdrop">
+      <div class="modal profile-modal">
+        <div class="modal-title profile-modal-title">
+          <h2>Editar CURP</h2>
+          <button class="modal-close" onclick="closeProfileModal('curpModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="curpForm" class="modal-body">
+          <h3 class="modal-section-title">
+            Identificación del usuario
+          </h3>
+          <label class="input-with-icon"
+            >CURP
+            <span>
+              <input name="curp" maxlength="18" placeholder="Ingresa la CURP" />
+            </span></label
+          >
+          <div class="form-actions">
+            <button class="btn red outline" type="button" onclick="closeProfileModal('curpModal')">
+              Cancelar</button
+            ><button class="btn teal" type="submit">
+              <i class="fas fa-save"></i> Actualizar CURP
             </button>
           </div>
         </form>

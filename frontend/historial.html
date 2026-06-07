@@ -3,6 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const root = document.documentElement;
+        root.classList.add("booting");
+        try {
+          const isDark = localStorage.getItem("theme") === "dark";
+          root.dataset.theme = isDark ? "dark" : "light";
+          root.classList.toggle("theme-dark", isDark);
+          root.classList.toggle("sidebar-start-collapsed", localStorage.getItem("sidebarCollapsed") === "1");
+        } catch (_) {
+          root.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <style>
+      html.booting[data-theme="dark"],
+      html.booting[data-theme="dark"] body {
+        background: #0b1220;
+      }
+    </style>
     <title>Historial | PTARM</title>
     <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
@@ -72,18 +92,83 @@
             <button data-action="ELIMINAR" type="button">
               <i class="far fa-trash-alt"></i> Partes eliminados
             </button>
+            <button data-action="ESTADISTICAS" type="button">
+              <i class="fas fa-chart-bar"></i> Estadísticas
+            </button>
           </div>
-          <div class="history-tools">
+          <div class="history-tools" id="historyTools">
             <div class="search-wrap">
               <i class="fas fa-search"></i>
               <input id="historySearch" placeholder="Buscar actividad con folio, creador o fecha" />
             </div>
+            <button class="btn blue outline advanced-search-trigger" id="historyAdvancedSearchBtn" type="button">
+              <i class="fas fa-search-plus"></i> Avanzada
+            </button>
             <button class="btn icon-only" type="button" onclick="focusHistoryDate()">
               <i class="far fa-calendar"></i>
             </button>
             <input id="historyDate" class="date-ghost" type="date" />
           </div>
-          <div class="table-controls compact history-table">
+          <div id="historyAdvancedSearchSummary" class="advanced-search-summary" hidden></div>
+          <div class="stats-panel" id="statsPanel" hidden>
+            <div class="stats-controls">
+              <label
+                >Mes
+                <select id="statsMonth">
+                  <option value="1">Enero</option>
+                  <option value="2">Febrero</option>
+                  <option value="3">Marzo</option>
+                  <option value="4">Abril</option>
+                  <option value="5">Mayo</option>
+                  <option value="6">Junio</option>
+                  <option value="7">Julio</option>
+                  <option value="8">Agosto</option>
+                  <option value="9">Septiembre</option>
+                  <option value="10">Octubre</option>
+                  <option value="11">Noviembre</option>
+                  <option value="12">Diciembre</option>
+                </select></label
+              ><label
+                >Año<input id="statsYear" type="number" min="2020" max="2100" /></label
+              ><label
+                >Vista
+                <select id="statsView">
+                  <option value="bars">Barras</option>
+                  <option value="pie">Pastel</option>
+                  <option value="table">Tabla</option>
+                </select></label
+              ><button class="btn blue" id="refreshStatsBtn" type="button">
+                <i class="fas fa-sync-alt"></i> Actualizar
+              </button>
+            </div>
+            <div class="stats-cards" id="statsCards"></div>
+            <div class="stats-layout">
+              <div class="stats-chart-panel">
+                <div class="section-head tight">
+                  <h2 id="statsChartTitle">Actividad mensual</h2>
+                  <p id="statsSummaryText"></p>
+                </div>
+                <div id="statsChart" class="stats-chart"></div>
+              </div>
+              <div class="stats-side-panel">
+                <h3>Usuarios con más actividad</h3>
+                <div id="statsUsers" class="stats-user-list"></div>
+              </div>
+            </div>
+            <div class="table-wrap stats-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Actividad</th>
+                    <th>Total</th>
+                    <th>Porcentaje</th>
+                  </tr>
+                </thead>
+                <tbody id="statsRows"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="table-controls compact history-table" id="historyTableControls">
             <label class="inline-check"
               >Mostrar
               <select id="historyPageSize">
@@ -103,7 +188,7 @@
               </button>
             </div>
           </div>
-          <div class="table-wrap history-table">
+          <div class="table-wrap history-table" id="historyTableWrap">
             <table>
               <thead>
                 <tr>
@@ -120,6 +205,55 @@
           </div>
         </section>
       </main>
+    </div>
+    <div id="historyAdvancedSearchModal" class="modal-backdrop">
+      <div class="modal advanced-search-modal">
+        <div class="modal-title">
+          <h2><i class="fas fa-search-plus"></i> Búsqueda avanzada</h2>
+          <button class="modal-close" onclick="closeModal('historyAdvancedSearchModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="historyAdvancedSearchForm" class="modal-body">
+          <div class="advanced-search-intro">
+            <strong>Filtrar historial por apartado</strong>
+            <span>Agrega uno o más filtros y se mostrarán solo las actividades que cumplan todos.</span>
+          </div>
+          <div id="historyAdvancedFilterList" class="advanced-filter-list" hidden></div>
+          <div class="form-grid cols-2 advanced-search-grid">
+            <label
+              >Apartado
+              <select id="historyAdvancedSearchField" required>
+                <option value="">Selecciona un apartado</option>
+                <option value="folio">Folio</option>
+                <option value="usuario">Usuario</option>
+                <option value="fecha">Fecha</option>
+                <option value="hora">Hora</option>
+                <option value="mp">MP</option>
+                <option value="encargado">Encargado</option>
+                <option value="descripcion">Descripción</option>
+              </select></label
+            ><label
+              >Dato a buscar
+              <input id="historyAdvancedSearchValue" list="historyAdvancedSearchOptions" placeholder="Escribe el dato..." required />
+              <datalist id="historyAdvancedSearchOptions"></datalist></label
+            >
+          </div>
+          <div class="advanced-search-hint">
+            <i class="fas fa-info-circle"></i>
+            <span>Agrega un filtro y el formulario quedará listo para colocar otro.</span>
+          </div>
+          <div class="modal-actions">
+            <button class="btn red outline" type="button" id="clearHistoryAdvancedSearchBtn">
+              Limpiar búsqueda</button
+            ><button class="btn blue outline" type="button" id="addHistoryAdvancedFilterBtn">
+              <i class="fas fa-plus"></i> Agregar filtro</button
+            ><button class="btn green" type="submit">
+              <i class="fas fa-search"></i> Buscar
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
     <div id="toast" class="toast"></div>
     <div id="confirmModal" class="modal-backdrop">

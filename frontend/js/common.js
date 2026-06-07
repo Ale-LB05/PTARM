@@ -45,6 +45,7 @@ function allowedPagesForRole() {
 /** Configura layout comun: autenticacion, usuario, sidebar, permisos y menu superior. */
 function setupLayout(active) {
   requireAuth();
+  applyTheme();
   const allowedPages = allowedPagesForRole();
   if (!allowedPages.includes(active)) {
     location.href = allowedPages.includes("partes") ? "/partes.html" : "/perfil.html";
@@ -53,6 +54,7 @@ function setupLayout(active) {
   if (localStorage.getItem("sidebarCollapsed") === "1") {
     document.querySelector(".app-shell")?.classList.add("sidebar-collapsed");
   }
+  document.documentElement.classList.toggle("sidebar-start-collapsed", localStorage.getItem("sidebarCollapsed") === "1");
   const user = getUser();
   const userPhoto = user.foto || user.imagen_perfil || "/img/usuario.png";
   document.querySelectorAll("[data-user-name]").forEach((el) => {
@@ -76,6 +78,22 @@ function setupLayout(active) {
     card.hidden = !allowedPages.includes(card.dataset.page);
   });
   setupUserMenu();
+  document.documentElement.classList.remove("booting");
+}
+
+/** Aplica el tema visual guardado para todo el sistema. */
+function applyTheme() {
+  const isDark = localStorage.getItem("theme") === "dark";
+  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  document.documentElement.classList.toggle("theme-dark", isDark);
+}
+
+/** Alterna entre modo claro y modo oscuro y devuelve el tema activo. */
+function toggleTheme() {
+  const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  localStorage.setItem("theme", nextTheme);
+  applyTheme();
+  return nextTheme;
 }
 
 /** Activa el menu de perfil para abrirlo por click y cerrarlo al hacer click fuera. */
@@ -219,7 +237,9 @@ function toggleSidebar() {
   const shell = document.querySelector(".app-shell");
   if (!shell) return;
   shell.classList.toggle("sidebar-collapsed");
-  localStorage.setItem("sidebarCollapsed", shell.classList.contains("sidebar-collapsed") ? "1" : "0");
+  const isCollapsed = shell.classList.contains("sidebar-collapsed");
+  localStorage.setItem("sidebarCollapsed", isCollapsed ? "1" : "0");
+  document.documentElement.classList.toggle("sidebar-start-collapsed", isCollapsed);
 }
 
 /** Cierra sesión tras confirmación y limpia los datos locales. */

@@ -3,6 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const root = document.documentElement;
+        root.classList.add("booting");
+        try {
+          const isDark = localStorage.getItem("theme") === "dark";
+          root.dataset.theme = isDark ? "dark" : "light";
+          root.classList.toggle("theme-dark", isDark);
+        } catch (_) {
+          root.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <style>
+      html.booting[data-theme="dark"],
+      html.booting[data-theme="dark"] body {
+        background: #0b1220;
+      }
+    </style>
     <title>Partes de tránsito</title>
     <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
@@ -14,9 +33,9 @@
       <img src="/img/Logo.png" alt="FGE" />
       <h1>Partes de tránsito</h1>
       <h2>Iniciar sesión</h2>
-      <p>Ingresa tu correo electrónico para iniciar sesión</p>
+      <p>Ingresa tu correo electrónico o CURP para iniciar sesión</p>
       <form id="loginForm">
-        <input type="email" name="correo" placeholder="correoelectronico@dominio.com" required />
+        <input type="text" name="usuario" placeholder="Correo electrónico o CURP" required />
         <div class="password-wrap">
           <input type="password" name="password" placeholder="Contraseña" required />
           <button type="button" onclick="togglePassword(this)" aria-label="Mostrar contraseña"><i class="fas fa-eye"></i></button>

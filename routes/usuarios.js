@@ -3,9 +3,20 @@ const multer = require("multer");
 const bcrypt = require("bcryptjs");
 const db = require("../db");
 const { requireRole } = require("../middleware/auth");
+const { recordActivity } = require("../utils/activity");
 
 const router = express.Router();
 router.use(requireRole("Administrador"));
+let userCurpColumnReady = false;
+
+async function ensureUserCurpColumn() {
+  if (userCurpColumnReady) return;
+  const [columns] = await db.query("SHOW COLUMNS FROM usuarios");
+  if (!columns.some((column) => column.Field === "curp")) {
+    await db.query("ALTER TABLE usuarios ADD COLUMN curp varchar(18) DEFAULT NULL AFTER correo");
+  }
+  userCurpColumnReady = true;
+}
 const storage = multer.diskStorage({
   // Guarda imagenes de usuarios creadas desde el panel de personal.
   destination: (req, file, cb) => cb(null, "./uploads/perfiles/"),
@@ -20,8 +31,9 @@ function imagePath(file) {
 
 // Lista todos los usuarios para el panel de personal.
 router.get("/", async (req, res) => {
+  await ensureUserCurpColumn();
   const [rows] = await db.query(
-    `SELECT u.id_usuario, u.nombre, u.correo, u.instituto, u.cargo_grado, u.imagen_perfil, r.nombre AS rol, u.id_rol
+    `SELECT u.id_usuario, u.nombre, u.correo, u.curp, u.instituto, u.cargo_grado, u.imagen_perfil, r.nombre AS rol, u.id_rol
      FROM usuarios u
      INNER JOIN roles r ON r.id_rol = u.id_rol
      ORDER BY u.fecha_creacion DESC`,
@@ -31,24 +43,27 @@ router.get("/", async (req, res) => {
 
 // Crea un usuario nuevo con rol, contraseña cifrada e imagen opcional.
 router.post("/", upload.single("imagen"), async (req, res) => {
-  const { nombre, correo, password, instituto, cargo_grado, id_rol } = req.body;
+  await ensureUserCurpColumn();
+  const { nombre, correo, curp, password, instituto, cargo_grado, id_rol } = req.body;
   if (!nombre || !correo || !password) {
     return res.status(400).json({ success: false, error: "Faltan datos obligatorios" });
   }
 
-  await db.query(
-    `INSERT INTO usuarios (nombre, correo, password_hash, instituto, cargo_grado, imagen_perfil, id_rol)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [nombre, correo, await bcrypt.hash(password, 10), instituto || null, cargo_grado || null, imagePath(req.file), id_rol || 2],
+  const [result] = await db.query(
+    `INSERT INTO usuarios (nombre, correo, curp, password_hash, instituto, cargo_grado, imagen_perfil, id_rol)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [nombre, correo, curp ? String(curp).trim().toUpperCase() : null, await bcrypt.hash(password, 10), instituto || null, cargo_grado || null, imagePath(req.file), id_rol || 2],
   );
+  await recordActivity("CREACION_USUARIO", { idUsuario: req.user.id, detalle: `Usuario creado: ${correo} (#${result.insertId})` });
   res.json({ success: true, message: "Usuario creado" });
 });
 
 // Actualiza datos del usuario y cambia contraseña/foto solo si se enviaron.
 router.put("/:id", upload.single("imagen"), async (req, res) => {
-  const { nombre, correo, password, instituto, cargo_grado, id_rol } = req.body;
-  const fields = ["nombre = ?", "correo = ?", "instituto = ?", "cargo_grado = ?", "id_rol = ?"];
-  const params = [nombre, correo, instituto || null, cargo_grado || null, id_rol || 2];
+  await ensureUserCurpColumn();
+  const { nombre, correo, curp, password, instituto, cargo_grado, id_rol } = req.body;
+  const fields = ["nombre = ?", "correo = ?", "curp = ?", "instituto = ?", "cargo_grado = ?", "id_rol = ?"];
+  const params = [nombre, correo, curp ? String(curp).trim().toUpperCase() : null, instituto || null, cargo_grado || null, id_rol || 2];
 
   if (password) {
     fields.push("password_hash = ?");

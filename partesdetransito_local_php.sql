@@ -29,6 +29,7 @@ CREATE TABLE `usuarios` (
   `id_usuario` int(11) NOT NULL,
   `nombre` varchar(160) NOT NULL,
   `correo` varchar(180) NOT NULL,
+  `curp` varchar(18) DEFAULT NULL,
   `password_hash` varchar(255) NOT NULL,
   `instituto` varchar(180) DEFAULT NULL,
   `cargo_grado` varchar(180) DEFAULT NULL,
@@ -90,6 +91,7 @@ CREATE TABLE `vehiculos` (
   `id_vehiculo` bigint(20) NOT NULL,
   `id_parte` bigint(20) NOT NULL,
   `numero_vehiculo` int(11) NOT NULL DEFAULT 1,
+  `tipo_vehiculo` enum('Carro','Moto','Camioneta','Camion','Bicicleta','Otro') NOT NULL DEFAULT 'Carro',
   `marca` varchar(120) DEFAULT NULL,
   `modelo` varchar(120) DEFAULT NULL,
   `tipo` varchar(120) DEFAULT NULL,
@@ -118,6 +120,16 @@ CREATE TABLE `personas_involucradas` (
   `observaciones` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE `personas_involucradas_detalle` (
+  `id_persona_detalle` bigint(20) NOT NULL,
+  `id_parte` bigint(20) NOT NULL,
+  `id_vehiculo` bigint(20) DEFAULT NULL,
+  `numero_vehiculo` int(11) DEFAULT NULL,
+  `numero_persona` int(11) NOT NULL,
+  `nombre` varchar(180) DEFAULT NULL,
+  `tipo_participacion` enum('Conductor','Pasajero','Civil') NOT NULL DEFAULT 'Civil'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- --------------------------------------------------------
 -- Exportaciones e historial
 -- --------------------------------------------------------
@@ -141,6 +153,15 @@ CREATE TABLE `historial_cambios` (
   `fecha` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE `actividad_sistema` (
+  `id_actividad` bigint(20) NOT NULL,
+  `tipo_evento` enum('CREACION_PARTE','EDICION_PARTE','ELIMINACION_PARTE','CREACION_USUARIO','LOGIN','EXPORTACION') NOT NULL,
+  `id_usuario` int(11) DEFAULT NULL,
+  `id_parte` bigint(20) DEFAULT NULL,
+  `detalle` varchar(255) DEFAULT NULL,
+  `fecha` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE `notificaciones_vistas` (
   `id_vista` bigint(20) NOT NULL,
   `id_usuario` int(11) NOT NULL,
@@ -159,6 +180,7 @@ ALTER TABLE `roles`
 ALTER TABLE `usuarios`
   ADD PRIMARY KEY (`id_usuario`),
   ADD UNIQUE KEY `uk_usuarios_correo` (`correo`),
+  ADD UNIQUE KEY `uk_usuarios_curp` (`curp`),
   ADD KEY `idx_usuarios_rol` (`id_rol`);
 
 ALTER TABLE `ministerios_publicos`
@@ -181,6 +203,7 @@ ALTER TABLE `partes`
 ALTER TABLE `vehiculos`
   ADD PRIMARY KEY (`id_vehiculo`),
   ADD KEY `idx_vehiculos_parte` (`id_parte`),
+  ADD KEY `idx_vehiculos_tipo_vehiculo` (`tipo_vehiculo`),
   ADD KEY `idx_vehiculos_placa` (`numero_placa`),
   ADD KEY `idx_vehiculos_serie` (`numero_serie`);
 
@@ -189,6 +212,11 @@ ALTER TABLE `personas_involucradas`
   ADD KEY `idx_personas_parte` (`id_parte`),
   ADD KEY `idx_personas_vehiculo` (`id_vehiculo`),
   ADD KEY `idx_personas_gravedad` (`gravedad`);
+
+ALTER TABLE `personas_involucradas_detalle`
+  ADD PRIMARY KEY (`id_persona_detalle`),
+  ADD KEY `idx_personas_detalle_parte` (`id_parte`),
+  ADD KEY `idx_personas_detalle_vehiculo` (`id_vehiculo`);
 
 ALTER TABLE `exportaciones`
   ADD PRIMARY KEY (`id_exportacion`),
@@ -200,6 +228,12 @@ ALTER TABLE `historial_cambios`
   ADD PRIMARY KEY (`id_historial`),
   ADD KEY `idx_historial_parte` (`id_parte`),
   ADD KEY `idx_historial_usuario` (`id_usuario`);
+
+ALTER TABLE `actividad_sistema`
+  ADD PRIMARY KEY (`id_actividad`),
+  ADD KEY `idx_actividad_tipo_fecha` (`tipo_evento`, `fecha`),
+  ADD KEY `idx_actividad_usuario` (`id_usuario`),
+  ADD KEY `idx_actividad_parte` (`id_parte`);
 
 ALTER TABLE `notificaciones_vistas`
   ADD PRIMARY KEY (`id_vista`),
@@ -218,8 +252,10 @@ ALTER TABLE `respondientes` MODIFY `id_respondiente` int(11) NOT NULL AUTO_INCRE
 ALTER TABLE `partes` MODIFY `id_parte` bigint(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `vehiculos` MODIFY `id_vehiculo` bigint(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `personas_involucradas` MODIFY `id_personas_involucradas` bigint(20) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `personas_involucradas_detalle` MODIFY `id_persona_detalle` bigint(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `exportaciones` MODIFY `id_exportacion` bigint(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `historial_cambios` MODIFY `id_historial` bigint(20) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `actividad_sistema` MODIFY `id_actividad` bigint(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `notificaciones_vistas` MODIFY `id_vista` bigint(20) NOT NULL AUTO_INCREMENT;
 
 -- --------------------------------------------------------
@@ -241,6 +277,10 @@ ALTER TABLE `vehiculos`
 ALTER TABLE `personas_involucradas`
   ADD CONSTRAINT `fk_personas_parte` FOREIGN KEY (`id_parte`) REFERENCES `partes` (`id_parte`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_personas_vehiculo` FOREIGN KEY (`id_vehiculo`) REFERENCES `vehiculos` (`id_vehiculo`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `personas_involucradas_detalle`
+  ADD CONSTRAINT `fk_personas_detalle_parte` FOREIGN KEY (`id_parte`) REFERENCES `partes` (`id_parte`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_personas_detalle_vehiculo` FOREIGN KEY (`id_vehiculo`) REFERENCES `vehiculos` (`id_vehiculo`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `exportaciones`
   ADD CONSTRAINT `fk_exportaciones_parte` FOREIGN KEY (`id_parte`) REFERENCES `partes` (`id_parte`) ON DELETE SET NULL ON UPDATE CASCADE,

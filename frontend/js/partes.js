@@ -5,6 +5,9 @@ let editingId = null;
 let viewMode = localStorage.getItem("partesViewMode") || "list";
 let vehicleIndex = 0;
 let partesPage = 1;
+let advancedFilters = [];
+let peoplePage = 1;
+let peopleAssignments = [];
 
 const partesRows = document.getElementById("partesRows");
 const partesListView = document.getElementById("partesListView");
@@ -12,11 +15,27 @@ const partesGridView = document.getElementById("partesGridView");
 const exportRows = document.getElementById("exportRows");
 const parteForm = document.getElementById("parteForm");
 const partSearch = document.getElementById("partSearch");
+const advancedSearchBtn = document.getElementById("advancedSearchBtn");
+const advancedSearchForm = document.getElementById("advancedSearchForm");
+const advancedSearchField = document.getElementById("advancedSearchField");
+const advancedSearchValue = document.getElementById("advancedSearchValue");
+const advancedSearchOptions = document.getElementById("advancedSearchOptions");
+const advancedSearchSummary = document.getElementById("advancedSearchSummary");
+const advancedFilterList = document.getElementById("advancedFilterList");
+const addAdvancedFilterBtn = document.getElementById("addAdvancedFilterBtn");
+const clearAdvancedSearchBtn = document.getElementById("clearAdvancedSearchBtn");
 const exportSearch = document.getElementById("exportSearch");
 const exportSelectAll = document.getElementById("exportSelectAll");
 const exportCount = document.getElementById("exportCount");
 const vehiclesWrap = document.getElementById("vehiclesWrap");
-const vehiclePersonSelect = document.getElementById("vehiclePersonSelect");
+const peopleAssignmentPanel = document.getElementById("peopleAssignmentPanel");
+const peopleAssignmentRows = document.getElementById("peopleAssignmentRows");
+const peopleAssignmentTableWrap = document.getElementById("peopleAssignmentTableWrap");
+const togglePeopleTableBtn = document.getElementById("togglePeopleTableBtn");
+const peoplePageSize = document.getElementById("peoplePageSize");
+const peoplePrevPage = document.getElementById("peoplePrevPage");
+const peopleNextPage = document.getElementById("peopleNextPage");
+const peoplePageInfo = document.getElementById("peoplePageInfo");
 const listViewBtn = document.getElementById("listViewBtn");
 const gridViewBtn = document.getElementById("gridViewBtn");
 const partDetailBody = document.getElementById("partDetailBody");
@@ -31,6 +50,7 @@ const canExportPartes = hasRole("administrador", "capturista", "auxiliar");
 const mpInput = parteForm.elements.id_mp;
 const respondienteInput = parteForm.elements.respondiente_nombre;
 let catalogsLoaded = false;
+let partCatalogs = { mps: [], respondientes: [] };
 
 /** Cierra cualquier modal por su id. */
 function closeModal(id) {
@@ -39,14 +59,243 @@ function closeModal(id) {
 
 /** Carga los partes desde la API aplicando el buscador principal. */
 async function loadPartes() {
-  const data = await api(`/api/partes?q=${encodeURIComponent(partSearch.value || "")}`);
+  const data = await api(partesSearchUrl());
   if (!data || !data.success) {
     showToast(data?.error || "No se pudieron cargar los partes", "error");
     return;
   }
-  partes = data.data;
+  partes = hasAdvancedSearch() ? await filterAdvancedPartes(data.data) : data.data;
   partesPage = 1;
+  renderAdvancedSearchOptions(advancedSearchField.value);
   renderPartes();
+}
+
+/** Construye la URL de busqueda general o avanzada para consultar partes. */
+function partesSearchUrl() {
+  const params = new URLSearchParams();
+  if (!hasAdvancedSearch() && partSearch.value.trim()) {
+    params.set("q", partSearch.value.trim());
+  }
+  return `/api/partes${params.toString() ? `?${params.toString()}` : ""}`;
+}
+
+/** Indica si hay un filtro avanzado activo. */
+function hasAdvancedSearch() {
+  return advancedFilters.length > 0;
+}
+
+/** Abre el modal de busqueda avanzada y prepara el ultimo filtro usado. */
+function openAdvancedSearch() {
+  loadPartCatalogs();
+  advancedSearchField.value = "";
+  advancedSearchValue.value = "";
+  syncAdvancedSearchInput();
+  renderAdvancedFilterList();
+  document.getElementById("advancedSearchModal").classList.add("show");
+  advancedSearchField.focus();
+}
+
+/** Ajusta el tipo de dato esperado segun el apartado elegido. */
+function syncAdvancedSearchInput() {
+  const field = advancedSearchField.value;
+  advancedSearchValue.type = field === "fecha" ? "date" : field === "hora" ? "time" : "text";
+  advancedSearchValue.placeholder = field === "fecha" ? "Selecciona una fecha" : field === "hora" ? "Selecciona una hora" : "Escribe el dato...";
+  advancedSearchValue.toggleAttribute("list", !["fecha", "hora"].includes(field));
+  if (!["fecha", "hora"].includes(field)) advancedSearchValue.setAttribute("list", "advancedSearchOptions");
+  renderAdvancedSearchOptions(field);
+}
+
+/** Muestra sugerencias del apartado seleccionado sin bloquear escritura manual. */
+function renderAdvancedSearchOptions(field) {
+  const options = advancedSearchOptionsForField(field);
+  advancedSearchOptions.innerHTML = options.map((value) => `<option value="${escapeAttr(value)}"></option>`).join("");
+}
+
+/** Devuelve opciones conocidas para campos con datos fijos o catalogos. */
+function advancedSearchOptionsForField(field) {
+  const values = {
+    estado: ["Activo", "Borrador", "Cerrado", "Archivado", "Cancelado"],
+    gravedad: ["Sin clasificar", "Bajo", "Medio", "Alto", "Otro"],
+    mp: [...partCatalogs.mps.map((mp) => mp.nombre), ...partes.map((parte) => parte.mp_nombre)],
+    respondiente: [...partCatalogs.respondientes.map((respondiente) => respondiente.nombre), ...partes.map((parte) => parte.respondiente_nombre)],
+    encargado: partes.map((parte) => parte.encargado_nombre),
+    folio: partes.map((parte) => parte.folio),
+    placa: partes.flatMap((parte) => splitSearchValues(parte.placas || parte.numero_placa)),
+    serie: partes.flatMap((parte) => splitSearchValues(parte.series || parte.numero_serie)),
+    marca: partes.flatMap((parte) => splitSearchValues(parte.marcas || parte.marca)),
+    modelo: partes.flatMap((parte) => splitSearchValues(parte.modelos || parte.modelo)),
+  };
+  return uniqueClean(values[field] || []);
+}
+
+/** Separa valores agregados de vehiculos para ofrecerlos en la lista. */
+function splitSearchValues(value = "") {
+  return String(value || "").split(/\s{2,}|\|/).map((item) => item.trim()).filter(Boolean);
+}
+
+/** Limpia duplicados y vacios. */
+function uniqueClean(values) {
+  const seen = new Set();
+  return values.filter((value) => {
+    const clean = String(value || "").trim();
+    const key = clean.toLowerCase();
+    if (!clean || clean === "Sin MP" || clean === "Sin asignar" || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Aplica el filtro avanzado y recarga la lista. */
+function applyAdvancedSearch(event) {
+  event.preventDefault();
+  addAdvancedFilter({ silent: true });
+  if (!hasAdvancedSearch()) {
+    showToast("Agrega al menos un filtro", "error");
+    return;
+  }
+  partSearch.value = "";
+  closeModal("advancedSearchModal");
+  updateAdvancedSearchSummary();
+  loadPartes();
+}
+
+/** Agrega el filtro capturado y deja listo el espacio para capturar otro. */
+function addAdvancedFilter(options = {}) {
+  const field = advancedSearchField.value;
+  const value = advancedSearchValue.value.trim();
+  if (!field || !value) {
+    if (!options.silent) showToast("Selecciona un apartado y escribe un dato", "error");
+    return false;
+  }
+  advancedFilters.push({ field, value });
+  advancedSearchField.value = "";
+  advancedSearchValue.value = "";
+  syncAdvancedSearchInput();
+  renderAdvancedFilterList();
+  updateAdvancedSearchSummary();
+  advancedSearchField.focus();
+  return true;
+}
+
+/** Limpia el filtro avanzado activo y vuelve a mostrar todos los partes. */
+function clearAdvancedSearch() {
+  advancedFilters = [];
+  advancedSearchField.value = "";
+  advancedSearchValue.value = "";
+  syncAdvancedSearchInput();
+  renderAdvancedFilterList();
+  updateAdvancedSearchSummary();
+  closeModal("advancedSearchModal");
+  loadPartes();
+}
+
+/** Elimina un filtro avanzado de la lista del modal. */
+function removeAdvancedFilter(index) {
+  advancedFilters.splice(index, 1);
+  renderAdvancedFilterList();
+  updateAdvancedSearchSummary();
+}
+
+/** Pinta los filtros acumulados dentro del modal. */
+function renderAdvancedFilterList() {
+  advancedFilterList.hidden = advancedFilters.length === 0;
+  advancedFilterList.innerHTML = advancedFilters.map((filter, index) => `
+    <span class="advanced-filter-chip">
+      <i class="fas fa-filter"></i>
+      ${escapeHtml(advancedFilterLabel(filter.field))}: <strong>${escapeHtml(filter.value)}</strong>
+      <button type="button" onclick="removeAdvancedFilter(${index})" title="Quitar filtro">
+        <i class="fas fa-times"></i>
+      </button>
+    </span>
+  `).join("");
+}
+
+/** Muestra una etiqueta compacta del filtro avanzado activo. */
+function updateAdvancedSearchSummary() {
+  if (!hasAdvancedSearch()) {
+    advancedSearchSummary.hidden = true;
+    advancedSearchSummary.innerHTML = "";
+    advancedSearchBtn.classList.remove("active");
+    return;
+  }
+  advancedSearchSummary.hidden = false;
+  advancedSearchSummary.innerHTML = `
+    <span><i class="fas fa-filter"></i> ${advancedFilters.length} filtro${advancedFilters.length === 1 ? "" : "s"} activo${advancedFilters.length === 1 ? "" : "s"}</span>
+    <button type="button" onclick="clearAdvancedSearch()" title="Limpiar busqueda avanzada">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
+  advancedSearchBtn.classList.add("active");
+}
+
+/** Filtra en el navegador como respaldo cuando el servidor devuelve todos los registros. */
+async function filterAdvancedPartes(rows) {
+  if (advancedFilters.some((filter) => isVehicleSearchField(filter.field))) {
+    const detailed = await loadDetailedParts(rows);
+    return detailed.filter((parte) => matchesAdvancedSearch(parte));
+  }
+  return rows.filter((parte) => matchesAdvancedSearch(parte));
+}
+
+/** Indica si el filtro avanzado debe revisar todos los vehiculos del parte. */
+function isVehicleSearchField(field) {
+  return ["placa", "serie", "marca", "modelo"].includes(field);
+}
+
+/** Compara un parte contra el filtro avanzado activo. */
+function matchesAdvancedSearch(parte) {
+  return advancedFilters.every((filter) => {
+    const needle = normalizeSearchText(filter.value);
+    const value = advancedSearchValueForParte(parte, filter.field);
+    if (filter.field === "fecha") return String(value || "").slice(0, 10) === filter.value;
+    if (filter.field === "hora") return String(value || "").slice(0, 5) === filter.value;
+    return normalizeSearchText(value).includes(needle);
+  });
+}
+
+/** Obtiene el texto visible del apartado elegido. */
+function advancedFilterLabel(field) {
+  return advancedSearchField.querySelector(`option[value="${field}"]`)?.textContent || "Apartado";
+}
+
+/** Obtiene el dato resumido del parte segun el apartado elegido. */
+function advancedSearchValueForParte(parte, field) {
+  const vehicleValues = vehicleSearchValues(parte);
+  const fields = {
+    folio: parte.folio,
+    fecha: parte.fecha,
+    hora: parte.hora,
+    estado: parte.estado,
+    gravedad: parte.gravedad_general,
+    mp: parte.mp_nombre,
+    respondiente: parte.respondiente_nombre,
+    encargado: parte.encargado_nombre,
+    placa: vehicleValues.placa || parte.placas || parte.numero_placa,
+    serie: vehicleValues.serie || parte.series || parte.numero_serie,
+    marca: vehicleValues.marca || parte.marcas || parte.marca,
+    modelo: vehicleValues.modelo || parte.modelos || parte.modelo,
+  };
+  return fields[field] || "";
+}
+
+/** Junta los datos de todos los carros registrados en un parte detallado. */
+function vehicleSearchValues(parte) {
+  const vehiculos = Array.isArray(parte.vehiculos) ? parte.vehiculos : [];
+  return {
+    placa: vehiculos.map((vehiculo) => vehiculo.numero_placa).join(" "),
+    serie: vehiculos.map((vehiculo) => vehiculo.numero_serie).join(" "),
+    marca: vehiculos.map((vehiculo) => vehiculo.marca).join(" "),
+    modelo: vehiculos.map((vehiculo) => vehiculo.modelo).join(" "),
+  };
+}
+
+/** Normaliza texto para buscar sin depender de mayusculas o acentos. */
+function normalizeSearchText(value = "") {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 /** Carga MP y respondientes desde base de datos para los campos buscables. */
@@ -55,10 +304,12 @@ async function loadPartCatalogs(force = false) {
   const selectedMp = mpInput.value;
   const data = await api("/api/partes/catalogos");
   if (!data?.success) return;
+  partCatalogs = data.data;
   mpInput.innerHTML = `<option value="">Sin MP</option>${data.data.mps.map((mp) => `<option value="${escapeAttr(mp.id_mp)}">${escapeHtml(mp.nombre)}</option>`).join("")}`;
   if (selectedMp) mpInput.value = selectedMp;
   respondienteOptions.innerHTML = data.data.respondientes.map((respondiente) => `<option value="${escapeAttr(respondiente.nombre)}"></option>`).join("");
   catalogsLoaded = true;
+  renderAdvancedSearchOptions(advancedSearchField.value);
 }
 
 /** Llena el select de usuarios que pueden quedar como encargados del parte. */
@@ -166,6 +417,11 @@ async function openParteModal(mode, id = null) {
   await loadPartCatalogs(true);
   parteForm.reset();
   resetVehicles();
+  peoplePage = 1;
+  peopleAssignments = [];
+  renderPeopleAssignments(0, []);
+  peopleAssignmentTableWrap.classList.remove("is-hidden");
+  togglePeopleTableBtn.innerHTML = `<i class="fas fa-eye-slash"></i> Ocultar tabla`;
   updateComplementQuestions();
   editingId = id;
   const title = document.getElementById("parteModalTitle");
@@ -190,6 +446,9 @@ function setParteFormMode(mode) {
     if (el.name) el.disabled = isView;
   });
   document.getElementById("addVehicleBtn").disabled = isView;
+  peopleAssignmentRows.querySelectorAll("input, select").forEach((field) => {
+    field.disabled = isView;
+  });
   vehiclesWrap.querySelectorAll("button").forEach((button) => {
     button.disabled = isView;
   });
@@ -209,7 +468,9 @@ function fillForm(parte) {
   });
   fillComplementDetails(parte);
   resetVehicles(parte.vehiculos?.length ? parte.vehiculos : [parte]);
-  vehiclePersonSelect.value = parte.id_vehiculo || "";
+  peoplePage = 1;
+  peopleAssignments = [];
+  renderPeopleAssignments(Number(parte.numero_personas) || 0, parte.personas_detalle || []);
   updateComplementQuestions();
 }
 
@@ -232,6 +493,7 @@ parteForm.addEventListener("submit", async (event) => {
   const payload = Object.fromEntries(new FormData(parteForm));
   const vehicles = collectVehicles();
   payload.vehiculos = vehicles;
+  payload.personas_detalle = collectPeopleAssignments();
   delete payload.marca;
   delete payload.modelo;
   delete payload.tipo;
@@ -468,7 +730,6 @@ function exportPartSection(parte) {
         <h3 class="section-title">Personas involucradas</h3>
         <div class="info-grid">
           ${exportField("Número de personas", parte.numero_personas)}
-          ${exportField("Vehículo asociado", parte.id_vehiculo)}
           ${exportField("Personas fallecidas", boolText(parte.personas_fallecidas))}
           ${exportField("Número de fallecidos", parte.numero_fallecidos)}
           ${exportField("Observación de fallecidos", parte.observacion_fallecidos)}
@@ -478,6 +739,10 @@ function exportPartSection(parte) {
           ${exportField("Gravedad", parte.gravedad)}
           ${exportField("Observaciones", parte.observaciones)}
         </div>
+        <table>
+          <thead><tr><th>#</th><th>Nombre</th><th>Vehículo</th><th>Participación</th></tr></thead>
+          <tbody>${renderPeopleRows(parte.personas_detalle, true)}</tbody>
+        </table>
 
         <h3 class="section-title">Vehículos</h3>
         <table>
@@ -518,7 +783,7 @@ function excelHtml(rows) {
             <tr>
               <th>Folio</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Gravedad</th>
               <th>Respondiente</th><th>MP asignado</th><th>Usuario encargado</th>
-              <th>Personas</th><th>Fallecidos</th><th>Heridos</th><th>Observaciones</th><th>Vehículos</th>
+              <th>Personas</th><th>Detalle personas</th><th>Fallecidos</th><th>Heridos</th><th>Observaciones</th><th>Vehículos</th>
             </tr>
           </thead>
           <tbody>
@@ -533,6 +798,7 @@ function excelHtml(rows) {
                 <td>${fieldHtml(parte.mp_nombre)}</td>
                 <td>${fieldHtml(parte.encargado_nombre)}</td>
                 <td>${fieldHtml(parte.numero_personas)}</td>
+                <td>${fieldHtml(peopleSummary(parte.personas_detalle))}</td>
                 <td>${fieldHtml(parte.numero_fallecidos)}</td>
                 <td>${fieldHtml(parte.numero_heridos)}</td>
                 <td>${fieldHtml(parte.observaciones)}</td>
@@ -554,6 +820,11 @@ function excelHtml(rows) {
             <tr><th>Personas heridas</th><td>${fieldHtml(boolText(parte.personas_heridas))}</td></tr>
             <tr><th>Otros</th><td>${fieldHtml(boolText(parte.otros))}</td></tr>
             <tr><th>Observaciones</th><td>${fieldHtml(parte.observaciones)}</td></tr>
+          </table>
+          <table>
+            <tr><td class="section" colspan="4">Personas involucradas</td></tr>
+            <tr><th>#</th><th>Nombre</th><th>Vehículo</th><th>Participación</th></tr>
+            ${renderPeopleRows(parte.personas_detalle, true)}
           </table>
           <table>
             <tr><td class="section" colspan="6">Vehículos</td></tr>
@@ -604,7 +875,7 @@ function resetVehicles(vehicles = [{}]) {
   vehiclesWrap.innerHTML = "";
   vehicles.forEach((vehicle) => addVehicle(vehicle));
   if (!vehiclesWrap.children.length) addVehicle();
-  refreshVehicleSelect();
+  refreshPeopleVehicleOptions();
 }
 
 /** Agrega una tarjeta de vehiculo al formulario. */
@@ -643,11 +914,11 @@ function addVehicle(vehicle = {}) {
     }
     card.remove();
     renumberVehicles();
-    refreshVehicleSelect();
+    refreshPeopleVehicleOptions();
   });
   vehiclesWrap.appendChild(card);
   renumberVehicles();
-  refreshVehicleSelect();
+  refreshPeopleVehicleOptions();
 }
 
 /** Recolecta los vehiculos escritos en el formulario. */
@@ -661,17 +932,6 @@ function collectVehicles() {
   }).filter((vehicle) => ["marca", "modelo", "tipo", "numero_serie", "numero_placa"].some((key) => vehicle[key]));
 }
 
-/** Actualiza el select de vehiculo asociado a personas involucradas. */
-function refreshVehicleSelect() {
-  const current = vehiclePersonSelect.value;
-  const options = [...vehiclesWrap.querySelectorAll(".vehicle-card")].map((card, index) => {
-    const plate = card.querySelector('[data-vehicle-field="numero_placa"]')?.value.trim();
-    return `<option value="${index + 1}">Carro #${index + 1}${plate ? ` - ${plate}` : ""}</option>`;
-  });
-  vehiclePersonSelect.innerHTML = `<option value="">Selecciona un carro</option>${options.join("")}`;
-  vehiclePersonSelect.value = current;
-}
-
 /** Reenumera los vehiculos cuando se agregan o eliminan tarjetas. */
 function renumberVehicles() {
   [...vehiclesWrap.querySelectorAll(".vehicle-card")].forEach((card, index) => {
@@ -679,6 +939,115 @@ function renumberVehicles() {
     const title = card.querySelector("legend span");
     if (title) title.textContent = `Carro #${index + 1}`;
   });
+}
+
+/** Devuelve los vehiculos actuales del formulario con etiqueta entendible para personas. */
+function currentVehicleOptions() {
+  return [...vehiclesWrap.querySelectorAll(".vehicle-card")].map((card, index) => {
+    const vehicle = {};
+    card.querySelectorAll("[data-vehicle-field]").forEach((input) => {
+      vehicle[input.dataset.vehicleField] = input.value.trim();
+    });
+    const details = [
+      vehicle.marca,
+      vehicle.modelo,
+      vehicle.tipo,
+      vehicle.numero_placa ? `Placa ${vehicle.numero_placa}` : "",
+    ].filter(Boolean).join(" / ");
+    return {
+      value: String(index + 1),
+      label: `Vehículo #${index + 1}${details ? ` - ${details}` : ""}`,
+    };
+  });
+}
+
+/** Actualiza todos los selectores de vehiculo dentro del listado de personas. */
+function refreshPeopleVehicleOptions() {
+  const options = currentVehicleOptions();
+  peopleAssignmentRows.querySelectorAll("[data-person-field='numero_vehiculo']").forEach((select) => {
+    const current = select.value;
+    select.innerHTML = `<option value="">Sin vehículo</option>${options.map((vehicle) => `<option value="${escapeAttr(vehicle.value)}">${escapeHtml(vehicle.label)}</option>`).join("")}`;
+    if ([...select.options].some((option) => option.value === current)) select.value = current;
+  });
+}
+
+/** Crea la tabla de personas segun la cantidad capturada. */
+function renderPeopleAssignments(count = Number(parteForm.numero_personas.value) || 0, savedPeople = peopleAssignments) {
+  syncPeopleAssignmentsFromRows();
+  const safeCount = Math.max(0, Number(count) || 0);
+  peopleAssignments = Array.from({ length: safeCount }, (_, index) => savedPeople[index] || peopleAssignments[index] || defaultPersonAssignment(index));
+  const pageSize = Number(peoplePageSize.value || 5);
+  const totalPages = Math.max(1, Math.ceil(safeCount / pageSize));
+  peoplePage = Math.min(Math.max(peoplePage, 1), totalPages);
+  const start = (peoplePage - 1) * pageSize;
+  const visiblePeople = peopleAssignments.slice(start, start + pageSize);
+  peopleAssignmentPanel.hidden = safeCount === 0;
+  peopleAssignmentRows.innerHTML = "";
+  visiblePeople.forEach((saved, rowIndex) => {
+    const personIndex = start + rowIndex;
+    const row = document.createElement("tr");
+    row.dataset.personIndex = String(personIndex);
+    row.innerHTML = `
+      <td>Persona ${personIndex + 1}</td>
+      <td>
+        <input data-person-field="nombre" value="${escapeAttr(saved.nombre)}" placeholder="Nombre de la persona" />
+      </td>
+      <td>
+        <select data-person-field="numero_vehiculo" data-saved-vehicle="${escapeAttr(saved.numero_vehiculo || saved.vehiculo_numero)}"></select>
+      </td>
+      <td>
+        <select data-person-field="tipo_participacion">
+          ${["Conductor", "Pasajero", "Civil"].map((type) => `<option value="${type}"${(saved.tipo_participacion || "Civil") === type ? " selected" : ""}>${type}</option>`).join("")}
+        </select>
+      </td>
+    `;
+    peopleAssignmentRows.appendChild(row);
+  });
+  refreshPeopleVehicleOptions();
+  peopleAssignmentRows.querySelectorAll("[data-person-field='numero_vehiculo']").forEach((select) => {
+    const savedVehicle = select.dataset.savedVehicle;
+    if (savedVehicle && [...select.options].some((option) => option.value === savedVehicle)) select.value = savedVehicle;
+  });
+  renderPeoplePageControls(safeCount, totalPages);
+}
+
+/** Recolecta el listado individual de personas involucradas. */
+function collectPeopleAssignments() {
+  syncPeopleAssignmentsFromRows();
+  return peopleAssignments.map((person, index) => ({ ...person, numero_persona: index + 1 }));
+}
+
+/** Persona base para filas aun no capturadas. */
+function defaultPersonAssignment(index) {
+  return { numero_persona: index + 1, nombre: "", numero_vehiculo: "", tipo_participacion: "Civil" };
+}
+
+/** Guarda lo escrito en las filas visibles antes de repintar o cambiar pagina. */
+function syncPeopleAssignmentsFromRows() {
+  peopleAssignmentRows.querySelectorAll("tr").forEach((row) => {
+    const index = Number(row.dataset.personIndex);
+    if (!Number.isInteger(index)) return;
+    const person = peopleAssignments[index] || defaultPersonAssignment(index);
+    row.querySelectorAll("[data-person-field]").forEach((field) => {
+      person[field.dataset.personField] = field.value.trim();
+    });
+    person.numero_persona = index + 1;
+    peopleAssignments[index] = person;
+  });
+}
+
+/** Actualiza texto y estado de paginacion de personas. */
+function renderPeoplePageControls(totalPeople, totalPages) {
+  peoplePageInfo.textContent = totalPeople ? `Página ${peoplePage} de ${totalPages}` : "Página 1 de 1";
+  peoplePrevPage.disabled = peoplePage <= 1;
+  peopleNextPage.disabled = peoplePage >= totalPages;
+}
+
+/** Oculta o muestra la tabla completa sin borrar los datos capturados. */
+function togglePeopleTable() {
+  peopleAssignmentTableWrap.classList.toggle("is-hidden");
+  const hidden = peopleAssignmentTableWrap.classList.contains("is-hidden");
+  togglePeopleTableBtn.innerHTML = `<i class="fas ${hidden ? "fa-eye" : "fa-eye-slash"}"></i> ${hidden ? "Mostrar tabla" : "Ocultar tabla"}`;
 }
 
 /** Muestra las preguntas extra segun complementos seleccionados. */
@@ -728,6 +1097,13 @@ function renderVehicleRows(vehicles = [], forExport = false) {
     : `<tr><td colspan="6">${forExport ? fieldHtml("") : "Sin vehiculos registrados."}</td></tr>`;
 }
 
+/** Pinta el detalle individual de personas involucradas. */
+function renderPeopleRows(people = [], forExport = false) {
+  return people?.length
+    ? people.map((person, index) => `<tr><td>${index + 1}</td><td>${forExport ? fieldHtml(person.nombre) : escapeHtml(person.nombre || "")}</td><td>${forExport ? fieldHtml(person.vehiculo_label) : escapeHtml(person.vehiculo_label || "Sin vehículo")}</td><td>${forExport ? fieldHtml(person.tipo_participacion) : escapeHtml(person.tipo_participacion || "Civil")}</td></tr>`).join("")
+    : `<tr><td colspan="4">${forExport ? fieldHtml("") : "Sin personas registradas."}</td></tr>`;
+}
+
 /** Resume todos los vehiculos en una sola cadena para Excel. */
 function vehicleSummary(vehicles = []) {
   return vehicles.length
@@ -737,6 +1113,17 @@ function vehicleSummary(vehicles = []) {
         `Tipo ${textValue(vehicle.tipo)}`,
         `Serie ${textValue(vehicle.numero_serie)}`,
         `Placa ${textValue(vehicle.numero_placa)}`,
+      ].join(" / ")}`).join(" | ")
+    : "Campo vacio";
+}
+
+/** Resume el detalle de personas para Excel. */
+function peopleSummary(people = []) {
+  return people?.length
+    ? people.map((person, index) => `Persona ${index + 1}: ${[
+        textValue(person.nombre, "Sin nombre"),
+        textValue(person.vehiculo_label, "Sin vehículo"),
+        textValue(person.tipo_participacion, "Civil"),
       ].join(" / ")}`).join(" | ")
     : "Campo vacio";
 }
@@ -790,7 +1177,19 @@ function escapeHtml(value = "") {
     .replaceAll("'", "&#039;");
 }
 
-partSearch.addEventListener("input", debounce(loadPartes));
+partSearch.addEventListener("input", debounce(() => {
+  if (hasAdvancedSearch()) {
+    advancedFilters = [];
+    renderAdvancedFilterList();
+    updateAdvancedSearchSummary();
+  }
+  loadPartes();
+}));
+advancedSearchBtn.addEventListener("click", openAdvancedSearch);
+advancedSearchField.addEventListener("change", syncAdvancedSearchInput);
+addAdvancedFilterBtn.addEventListener("click", () => addAdvancedFilter());
+advancedSearchForm.addEventListener("submit", applyAdvancedSearch);
+clearAdvancedSearchBtn.addEventListener("click", clearAdvancedSearch);
 listViewBtn.addEventListener("click", () => setViewMode("list"));
 gridViewBtn.addEventListener("click", () => setViewMode("grid"));
 partesPageSize.addEventListener("change", () => {
@@ -806,7 +1205,26 @@ partesNextPage.addEventListener("click", () => {
   renderPartes();
 });
 document.getElementById("addVehicleBtn").addEventListener("click", () => addVehicle());
-vehiclesWrap.addEventListener("input", refreshVehicleSelect);
+vehiclesWrap.addEventListener("input", refreshPeopleVehicleOptions);
+parteForm.numero_personas.addEventListener("input", () => {
+  peoplePage = 1;
+  renderPeopleAssignments();
+});
+togglePeopleTableBtn.addEventListener("click", togglePeopleTable);
+peoplePageSize.addEventListener("change", () => {
+  peoplePage = 1;
+  renderPeopleAssignments();
+});
+peoplePrevPage.addEventListener("click", () => {
+  syncPeopleAssignmentsFromRows();
+  peoplePage -= 1;
+  renderPeopleAssignments();
+});
+peopleNextPage.addEventListener("click", () => {
+  syncPeopleAssignmentsFromRows();
+  peoplePage += 1;
+  renderPeopleAssignments();
+});
 ["personas_fallecidas", "personas_heridas", "otros"].forEach((name) => {
   parteForm.elements[name].addEventListener("change", updateComplementQuestions);
 });
@@ -827,7 +1245,11 @@ exportRows.addEventListener("change", (event) => {
 });
 
 resetVehicles();
+renderPeopleAssignments(0, []);
 updateComplementQuestions();
+syncAdvancedSearchInput();
+renderAdvancedFilterList();
+updateAdvancedSearchSummary();
 applyViewMode();
 applyPartPermissions();
 loadPartCatalogs();
