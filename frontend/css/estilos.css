@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap");
+﻿@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap");
 
 :root {
   --azul: #123055;
@@ -669,7 +669,7 @@ footer {
 }
 
 .grid-form label,
-.carro-campo label {
+.vehiculo-campo label {
   color: var(--azul);
   font-weight: 700;
   font-size: 13px;
@@ -677,9 +677,9 @@ footer {
 
 .grid-form input,
 .grid-form select,
-.carro-campo input,
-.carro-campo select,
-.personas-carro input {
+.vehiculo-campo input,
+.vehiculo-campo select,
+.personas-vehiculo input {
   width: 100%;
   height: 29px;
   margin-top: 5px;
@@ -691,14 +691,14 @@ footer {
 
 .grid-form input:focus,
 .grid-form select:focus,
-.carro-campo input:focus,
-.carro-campo select:focus,
-.personas-carro input:focus {
+.vehiculo-campo input:focus,
+.vehiculo-campo select:focus,
+.personas-vehiculo input:focus {
   border-color: var(--azul);
   box-shadow: 0 0 0 3px rgba(3, 11, 93, 0.08);
 }
 
-.titulo-carros {
+.titulo-vehiculos {
   margin-top: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid #dddddd;
@@ -710,7 +710,7 @@ footer {
   font-size: 13px;
 }
 
-.titulo-carros button {
+.titulo-vehiculos button {
   color: #05b600;
   background: #ffffff;
   border: 1px solid #05d000;
@@ -723,18 +723,18 @@ footer {
   gap: 8px;
 }
 
-.titulo-carros i {
+.titulo-vehiculos i {
   color: #000000;
 }
 
-.carro-parte {
+.vehiculo-parte {
   margin: 12px 8px;
   border: 1px solid #111111;
   border-radius: 24px;
   overflow: hidden;
 }
 
-.carro-encabezado {
+.vehiculo-encabezado {
   min-height: 30px;
   padding: 6px 14px;
   display: flex;
@@ -744,28 +744,28 @@ footer {
   font-weight: 700;
 }
 
-.carro-encabezado button {
+.vehiculo-encabezado button {
   border: 0;
   background: transparent;
   color: var(--azul);
   cursor: pointer;
 }
 
-.carro-contenido {
+.vehiculo-contenido {
   padding: 0 14px 14px;
 }
 
-.carro-parte.minimizado .carro-contenido {
+.vehiculo-parte.minimizado .vehiculo-contenido {
   display: none;
 }
 
-.carro-grid {
+.vehiculo-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(150px, 1fr));
   gap: 12px 28px;
 }
 
-.personas-carro {
+.personas-vehiculo {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #dddddd;
@@ -774,7 +774,7 @@ footer {
   gap: 18px;
 }
 
-.personas-carro h4 {
+.personas-vehiculo h4 {
   color: var(--azul);
   margin: 0 0 6px;
   font-size: 13px;
@@ -999,8 +999,8 @@ footer {
   }
 
   .grid-form,
-  .carro-grid,
-  .personas-carro {
+  .vehiculo-grid,
+  .personas-vehiculo {
     grid-template-columns: 1fr;
   }
 
@@ -1077,3 +1077,4 @@ footer {
     justify-content: center;
   }
 }
+

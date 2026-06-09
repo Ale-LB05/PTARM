@@ -2,9 +2,12 @@ USE `partesdetransito_local`;
 
 -- Actualizacion para base existente:
 -- 1) CURP en usuarios para iniciar sesion con correo o CURP.
--- 2) Tipo de vehiculo para distinguir carro, moto u otro.
+-- 2) Tipo de vehiculo para distinguir automovil, moto u otro.
 -- 3) Detalle individual de personas involucradas.
 -- 4) Actividad mensual del sistema para futuras graficas/estadisticas.
+-- 5) Estructura para Google OAuth y ubicacion por kilometraje con Google Maps.
+-- 6) Corralon al que fue llevado cada vehiculo.
+-- 7) Estatus/danos por vehiculo, catalogo de corralones y motivo del parte.
 
 DELIMITER //
 
@@ -51,10 +54,38 @@ END//
 DELIMITER ;
 
 CALL ptarm_add_column_if_missing('usuarios', 'curp', '`curp` varchar(18) DEFAULT NULL AFTER `correo`');
+CALL ptarm_add_column_if_missing('usuarios', 'google_id', '`google_id` varchar(128) DEFAULT NULL AFTER `curp`');
+CALL ptarm_add_column_if_missing('usuarios', 'auth_provider', '`auth_provider` varchar(30) NOT NULL DEFAULT ''local'' AFTER `google_id`');
 CALL ptarm_add_index_if_missing('usuarios', 'uk_usuarios_curp', 'UNIQUE KEY `uk_usuarios_curp` (`curp`)');
+CALL ptarm_add_index_if_missing('usuarios', 'idx_usuarios_google_id', 'KEY `idx_usuarios_google_id` (`google_id`)');
 
-CALL ptarm_add_column_if_missing('vehiculos', 'tipo_vehiculo', '`tipo_vehiculo` enum(''Carro'',''Moto'',''Camioneta'',''Camion'',''Bicicleta'',''Otro'') NOT NULL DEFAULT ''Carro'' AFTER `numero_vehiculo`');
+CALL ptarm_add_column_if_missing('partes', 'tipo_parte', '`tipo_parte` varchar(80) DEFAULT NULL AFTER `folio`');
+
+CALL ptarm_add_column_if_missing('vehiculos', 'tipo_vehiculo', '`tipo_vehiculo` enum(''Vehiculo'',''Moto'',''Camioneta'',''Camion'',''Bicicleta'',''Otro'') NOT NULL DEFAULT ''Vehiculo'' AFTER `numero_vehiculo`');
+CALL ptarm_add_column_if_missing('vehiculos', 'corralon', '`corralon` varchar(180) DEFAULT NULL AFTER `numero_placa`');
+CALL ptarm_add_column_if_missing('vehiculos', 'id_corralon', '`id_corralon` int(11) DEFAULT NULL AFTER `corralon`');
+CALL ptarm_add_column_if_missing('vehiculos', 'estatus_vehiculo', '`estatus_vehiculo` varchar(80) DEFAULT NULL AFTER `id_corralon`');
+CALL ptarm_add_column_if_missing('vehiculos', 'danos_vehiculo', '`danos_vehiculo` text DEFAULT NULL AFTER `estatus_vehiculo`');
 CALL ptarm_add_index_if_missing('vehiculos', 'idx_vehiculos_tipo_vehiculo', 'KEY `idx_vehiculos_tipo_vehiculo` (`tipo_vehiculo`)');
+CALL ptarm_add_index_if_missing('vehiculos', 'idx_vehiculos_corralon', 'KEY `idx_vehiculos_corralon` (`id_corralon`)');
+
+CREATE TABLE IF NOT EXISTS `corralones` (
+  `id_corralon` int(11) NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(180) NOT NULL,
+  `direccion` varchar(255) DEFAULT NULL,
+  `telefono` varchar(40) DEFAULT NULL,
+  `activo` tinyint(1) NOT NULL DEFAULT 1,
+  `fecha_creacion` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id_corralon`),
+  UNIQUE KEY `uk_corralones_nombre` (`nombre`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CALL ptarm_add_column_if_missing('partes', 'ubicacion_kilometro', '`ubicacion_kilometro` varchar(120) DEFAULT NULL AFTER `hora`');
+CALL ptarm_add_column_if_missing('partes', 'ubicacion_direccion', '`ubicacion_direccion` varchar(255) DEFAULT NULL AFTER `ubicacion_kilometro`');
+CALL ptarm_add_column_if_missing('partes', 'ubicacion_lat', '`ubicacion_lat` decimal(10,7) DEFAULT NULL AFTER `ubicacion_direccion`');
+CALL ptarm_add_column_if_missing('partes', 'ubicacion_lng', '`ubicacion_lng` decimal(10,7) DEFAULT NULL AFTER `ubicacion_lat`');
+CALL ptarm_add_column_if_missing('partes', 'google_place_id', '`google_place_id` varchar(180) DEFAULT NULL AFTER `ubicacion_lng`');
+CALL ptarm_add_index_if_missing('partes', 'idx_partes_ubicacion', 'KEY `idx_partes_ubicacion` (`ubicacion_lat`, `ubicacion_lng`)');
 
 CREATE TABLE IF NOT EXISTS `personas_involucradas_detalle` (
   `id_persona_detalle` bigint(20) NOT NULL AUTO_INCREMENT,

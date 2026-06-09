@@ -25,6 +25,7 @@ function requireAuth() {
 /** Normaliza el rol del usuario para comparar permisos sin depender de mayusculas. */
 function normalizedRole() {
   const role = String(getUser().rol || "").trim().toLowerCase();
+  if (role === "admin") return "administrador";
   return role === "consulta" ? "auxiliar" : role;
 }
 

@@ -1,6 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const { loadEnv } = require("./utils/env");
+
+loadEnv();
+
 const { auth } = require("./middleware/auth");
 
 const app = express();

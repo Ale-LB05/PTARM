@@ -7,6 +7,24 @@ const router = express.Router();
 router.use(requireRole("Administrador", "Capturista", "Auxiliar"));
 
 let notificationSeenTableReady = false;
+const activityLabels = {
+  CREACION_PARTE: "Partes creados",
+  EDICION_PARTE: "Partes editados",
+  ELIMINACION_PARTE: "Partes eliminados",
+  CREACION_USUARIO: "Usuarios creados",
+  LOGIN: "Inicios de sesion",
+  EXPORTACION: "Exportaciones",
+};
+
+function statsRange(req) {
+  const today = new Date();
+  const year = Number(req.query.anio) || today.getFullYear();
+  const month = Math.min(Math.max(Number(req.query.mes) || today.getMonth() + 1, 1), 12);
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const endDate = new Date(year, month, 1);
+  const end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-01`;
+  return { year, month, start, end };
+}
 
 /** Crea la tabla de vistos una sola vez para no borrar movimientos del historial. */
 async function ensureNotificationSeenTable() {
@@ -73,12 +91,7 @@ router.get("/notificaciones", async (req, res) => {
 // Resume actividad mensual para graficas, porcentajes y tabla de estadisticas.
 router.get("/estadisticas", async (req, res) => {
   await ensureActivityTable();
-  const today = new Date();
-  const year = Number(req.query.anio) || today.getFullYear();
-  const month = Math.min(Math.max(Number(req.query.mes) || today.getMonth() + 1, 1), 12);
-  const start = `${year}-${String(month).padStart(2, "0")}-01`;
-  const endDate = new Date(year, month, 1);
-  const end = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-01`;
+  const { year, month, start, end } = statsRange(req);
 
   const [eventRows] = await db.query(
     `SELECT tipo_evento, COUNT(*) AS total
@@ -107,18 +120,10 @@ router.get("/estadisticas", async (req, res) => {
     [start, end],
   );
 
-  const labels = {
-    CREACION_PARTE: "Partes creados",
-    EDICION_PARTE: "Partes editados",
-    ELIMINACION_PARTE: "Partes eliminados",
-    CREACION_USUARIO: "Usuarios creados",
-    LOGIN: "Inicios de sesion",
-    EXPORTACION: "Exportaciones",
-  };
   const total = eventRows.reduce((sum, row) => sum + Number(row.total), 0);
   const eventos = eventRows.map((row) => ({
     tipo: row.tipo_evento,
-    etiqueta: labels[row.tipo_evento] || row.tipo_evento,
+    etiqueta: activityLabels[row.tipo_evento] || row.tipo_evento,
     total: Number(row.total),
     porcentaje: total ? Number(((Number(row.total) / total) * 100).toFixed(1)) : 0,
   }));
@@ -133,6 +138,62 @@ router.get("/estadisticas", async (req, res) => {
       dias: dailyRows.map((row) => ({ dia: row.dia, total: Number(row.total) })),
       usuarios: userRows.map((row) => ({ nombre: row.nombre || "Usuario no disponible", total: Number(row.total) })),
       actividad_principal: eventos[0] || null,
+    },
+  });
+});
+
+// Devuelve registros detallados del mes para un tipo de estadistica.
+router.get("/estadisticas/detalle", async (req, res) => {
+  await ensureActivityTable();
+  const type = String(req.query.tipo || "").trim().toUpperCase();
+  if (!Object.prototype.hasOwnProperty.call(activityLabels, type)) {
+    return res.status(400).json({ success: false, error: "Tipo de estadistica invalido" });
+  }
+  const { year, month, start, end } = statsRange(req);
+  const [rows] = await db.query(
+    `SELECT
+       a.id_actividad,
+       a.tipo_evento,
+       a.detalle,
+       a.fecha,
+       u.nombre AS usuario_nombre,
+       u.correo AS usuario_correo,
+       p.folio,
+       p.fecha AS parte_fecha
+     FROM actividad_sistema a
+     LEFT JOIN usuarios u ON u.id_usuario = a.id_usuario
+     LEFT JOIN partes p ON p.id_parte = a.id_parte
+     WHERE a.tipo_evento = ? AND a.fecha >= ? AND a.fecha < ?
+     ORDER BY a.fecha DESC, a.id_actividad DESC`,
+    [type, start, end],
+  );
+  const [groupRows] = await db.query(
+    `SELECT COALESCE(u.nombre, 'Usuario no disponible') AS nombre, COUNT(*) AS total
+     FROM actividad_sistema a
+     LEFT JOIN usuarios u ON u.id_usuario = a.id_usuario
+     WHERE a.tipo_evento = ? AND a.fecha >= ? AND a.fecha < ?
+     GROUP BY a.id_usuario, u.nombre
+     ORDER BY total DESC, nombre`,
+    [type, start, end],
+  );
+  res.json({
+    success: true,
+    data: {
+      tipo: type,
+      etiqueta: activityLabels[type],
+      mes: month,
+      anio: year,
+      total: rows.length,
+      usuarios: groupRows.map((row) => ({ nombre: row.nombre, total: Number(row.total) })),
+      registros: rows.map((row) => ({
+        id: row.id_actividad,
+        usuario: row.usuario_nombre || "Usuario no disponible",
+        correo: row.usuario_correo || "",
+        folio: row.folio || "",
+        parte_fecha: row.parte_fecha,
+        detalle: row.detalle || "",
+        fecha: row.fecha,
+      })),
     },
   });
 });

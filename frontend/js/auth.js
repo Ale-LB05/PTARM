@@ -1,5 +1,6 @@
 const loginForm = document.getElementById("loginForm");
 const setupForm = document.getElementById("setupForm");
+const googleLoginBtn = document.getElementById("googleLoginBtn");
 
 /** Alterna entre mostrar y ocultar un campo de contraseña. */
 function togglePassword(button) {
@@ -24,6 +25,7 @@ async function checkStatus() {
 
 if (loginForm) {
   checkStatus();
+  showGoogleLoginError();
   // Inicia sesión, guarda token/usuario en localStorage y entra al sistema.
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -43,6 +45,28 @@ if (loginForm) {
     showAuthAlert("Bienvenido", "Inicio de sesión correcto", "success", () => {
       location.href = "/inicio.html";
     });
+  });
+}
+
+if (googleLoginBtn) {
+  googleLoginBtn.addEventListener("click", () => {
+    location.href = "/api/auth/google";
+  });
+}
+
+function showGoogleLoginError() {
+  const error = new URLSearchParams(location.search).get("googleError");
+  if (!error) return;
+  const messages = {
+    missing_config: "Google OAuth todavia no esta configurado en el servidor.",
+    no_code: "Google no devolvio un codigo de acceso.",
+    token: "No se pudo validar la sesion con Google.",
+    profile: "No se pudo leer el perfil de Google.",
+    user_not_allowed: "Ese correo de Google no esta registrado como usuario activo.",
+    server: "Ocurrio un error al iniciar sesion con Google.",
+  };
+  showAuthAlert("Google", messages[error] || "No se pudo iniciar sesion con Google", "error", () => {
+    history.replaceState({}, document.title, location.pathname);
   });
 }
 

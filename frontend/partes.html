@@ -26,7 +26,12 @@
     <title>Partes | PTARM</title>
     <link rel="icon" type="image/png" href="/img/logot.png" />
     <link href="/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="/css/styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQ2ATbPttBrtx3F4LkG2Z5h2e6uM4Qk="
+      crossorigin="" />
+    <link rel="stylesheet" href="/css/styles.css?v=20260609j" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
@@ -113,7 +118,7 @@
             <div class="toolbar-right">
               <button class="btn blue" id="openExportBtn" onclick="openExport()">
                 <i class="fas fa-file-export"></i> Exportar</button
-              ><button class="btn green" id="createParteBtn" onclick="openParteModal('create')">
+              ><button class="btn green" id="createParteBtn" type="button" onclick="openParteModal('create')">
                 <i class="fas fa-file-medical"></i> Crear nuevo
               </button>
             </div>
@@ -144,7 +149,7 @@
               <thead>
                 <tr>
                   <th>No. parte</th>
-                  <th>Nombre</th>
+                  <th>Nombre / motivo</th>
                   <th>Fecha</th>
                   <th>Estado</th>
                   <th>MP</th>
@@ -175,6 +180,14 @@
               >Folio del parte<input
                 name="folio"
                 placeholder="Crea un folio..." /></label
+            ><label
+              >Motivo del parte<select name="tipo_parte">
+                <option value="">Selecciona un motivo</option>
+                <option>Accidente de tránsito</option>
+                <option>Robo</option>
+                <option>Daño al vehículo</option>
+                <option>Otro</option>
+              </select></label
             ><label>Fecha<input type="date" name="fecha" /></label
             ><label>Hora<input type="time" name="hora" /></label>
           </div>
@@ -193,6 +206,47 @@
                 placeholder="Selecciona un respondiente"
             /><i class="fas fa-search"></i></div><datalist id="respondienteOptions"></datalist></label>
           </div>
+          <fieldset class="location-fieldset">
+            <legend><i class="fas fa-map-marker-alt"></i> Ubicación por kilometraje</legend>
+            <div class="form-grid cols-2">
+              <label
+                >Kilómetro o referencia
+                <div class="lookup-field">
+                  <input
+                    name="ubicacion_kilometro"
+                    id="locationKilometer"
+                    autocomplete="off"
+                    placeholder="Ej. Km 12 carretera Morelia-Pátzcuaro"
+                  /><i class="fas fa-road"></i></div></label
+              ><label
+                >Resultado de OpenStreetMap
+                <div class="lookup-field">
+                  <input
+                    name="ubicacion_direccion"
+                    id="locationAddress"
+                    placeholder="Dirección encontrada"
+                  /><i class="fas fa-map"></i></div></label
+              >
+            </div>
+            <input type="hidden" name="ubicacion_lat" id="locationLat" />
+            <input type="hidden" name="ubicacion_lng" id="locationLng" />
+            <input type="hidden" name="google_place_id" id="locationPlaceId" />
+            <div class="location-actions">
+              <button class="btn blue outline" id="searchLocationBtn" type="button">
+                <i class="fas fa-search-location"></i> Buscar ubicación
+              </button>
+              <button class="btn red outline" id="clearLocationBtn" type="button">
+                <i class="fas fa-times"></i> Limpiar ubicación
+              </button>
+              <span id="locationStatus">Sistema listo para buscar.</span>
+            </div>
+            <div class="location-preview" id="locationPreview">
+              <i class="fas fa-map-marked-alt"></i>
+              <span>Sin ubicación seleccionada</span>
+            </div>
+            <div class="location-map" id="locationMap" hidden></div>
+          </fieldset>
+          <datalist id="corralonOptions"></datalist>
           <div class="sub-row">
             <span>Dato(s)</span
             ><button class="tiny-add" id="addVehicleBtn" type="button">
@@ -322,6 +376,10 @@
               </div>
             </div>
           </fieldset>
+          <fieldset class="part-history-panel" id="partHistoryPanel" hidden>
+            <legend><i class="fas fa-history"></i> Historial del parte</legend>
+            <div id="partHistoryRows" class="part-history-list"></div>
+          </fieldset>
           <div class="form-grid cols-3">
             <label
               >Usuario encargado<select
@@ -393,6 +451,7 @@
               <select id="advancedSearchField" required>
                 <option value="">Selecciona un apartado</option>
                 <option value="folio">No. parte / folio</option>
+                <option value="tipo_parte">Motivo del parte</option>
                 <option value="fecha">Fecha</option>
                 <option value="hora">Hora</option>
                 <option value="estado">Estado</option>
@@ -404,6 +463,9 @@
                 <option value="serie">No. serie</option>
                 <option value="marca">Marca del vehículo</option>
                 <option value="modelo">Modelo del vehículo</option>
+                <option value="corralon">Corralón</option>
+                <option value="estatus_vehiculo">Estatus del vehículo</option>
+                <option value="danos_vehiculo">Daños del vehículo</option>
               </select></label
             ><label
               >Dato a buscar
@@ -493,8 +555,12 @@
         </div>
       </div>
     </div>
-    <script src="/js/common.js"></script>
-    <script src="/js/partes.js"></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""></script>
+    <script src="/js/common.js?v=20260609f"></script>
+    <script src="/js/partes.js?v=20260609j"></script>
     <script src="/vendor/jquery/jquery.min.js"></script>
     <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="/vendor/jquery-easing/jquery.easing.min.js"></script>

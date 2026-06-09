@@ -1,0 +1,3 @@
+.env
+codex-server-test*.log
+node_modules/
