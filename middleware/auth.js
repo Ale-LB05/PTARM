@@ -20,6 +20,7 @@ function auth(req, res, next) {
 /** Unifica nombres de rol para comparar permisos sin depender del texto exacto. */
 function normalizeRole(role = "") {
   const clean = String(role).trim().toLowerCase();
+  if (clean === "admin") return "administrador";
   if (clean === "consulta") return "auxiliar";
   return clean;
 }

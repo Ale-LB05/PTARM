@@ -1,4 +1,4 @@
-const token = localStorage.getItem("token");
+﻿const token = localStorage.getItem("token");
 const nombre = localStorage.getItem("usuario");
 const rol = localStorage.getItem("rol");
 const cargo = localStorage.getItem("cargo");
@@ -24,12 +24,12 @@ const modalParte = document.getElementById("modalParte");
 const formParte = document.getElementById("formParte");
 const btnCerrarModal = document.getElementById("btnCerrarModal");
 const btnCancelarParte = document.getElementById("btnCancelarParte");
-const btnAgregarCarro = document.getElementById("btnAgregarCarro");
-const contenedorCarros = document.getElementById("contenedorCarros");
+const btnAgregarVehiculo = document.getElementById("btnAgregarVehiculo");
+const contenedorVehiculos = document.getElementById("contenedorVehiculos");
 const mpParte = document.getElementById("mpParte");
 const respondienteParte = document.getElementById("respondienteParte");
 
-let contadorCarros = 0;
+let contadorVehiculos = 0;
 
 /** Configura nombre, cargo/foto y estado visual del usuario en el encabezado. */
 function configurarUsuario() {
@@ -70,7 +70,7 @@ function dibujarPartes(partes) {
   tablaPartes.innerHTML = partes
     .map((parte) => {
       const folio = parte.folio || String(parte.id_parte).padStart(8, "0");
-      const nombreParte = parte.placas ? `Parte con placas ${parte.placas}` : "Parte de tránsito";
+      const nombreParte = parte.placas ? `Parte con placas ${parte.placas}` : "Parte de trÃ¡nsito";
 
       return `
         <tr>
@@ -96,7 +96,7 @@ async function cargarPartes(busqueda = "") {
     const resultado = await respuesta.json();
 
     if (!respuesta.ok) {
-      tablaPartes.innerHTML = `<tr><td colspan="5" class="mensaje-tabla">${resultado.error || "No se pudo cargar la información."}</td></tr>`;
+      tablaPartes.innerHTML = `<tr><td colspan="5" class="mensaje-tabla">${resultado.error || "No se pudo cargar la informaciÃ³n."}</td></tr>`;
       if (respuesta.status === 401) {
         localStorage.clear();
         linkLogin.classList.remove("oculto");
@@ -111,7 +111,7 @@ async function cargarPartes(busqueda = "") {
   }
 }
 
-/** Carga catálogos de MP y respondientes para el formulario anterior. */
+/** Carga catÃ¡logos de MP y respondientes para el formulario anterior. */
 async function cargarCatalogos() {
   if (!token) return;
 
@@ -138,55 +138,55 @@ async function cargarCatalogos() {
   }
 }
 
-/** Agrega una seccion de carro con campos de vehiculo y personas involucradas. */
-function crearCarro() {
-  contadorCarros += 1;
-  const numero = contadorCarros;
-  const carro = document.createElement("section");
-  carro.className = "carro-parte";
-  carro.dataset.numero = numero;
+/** Agrega una seccion de Vehiculo con campos de vehiculo y personas involucradas. */
+function crearVehiculo() {
+  contadorVehiculos += 1;
+  const numero = contadorVehiculos;
+  const Vehiculo = document.createElement("section");
+  Vehiculo.className = "Vehiculo-parte";
+  Vehiculo.dataset.numero = numero;
 
-  carro.innerHTML = `
-    <div class="carro-encabezado">
-      <span>Carro#${numero}</span>
-      <button type="button" class="btnMinimizarCarro" title="Minimizar o abrir">
+  Vehiculo.innerHTML = `
+    <div class="Vehiculo-encabezado">
+      <span>Vehiculo#${numero}</span>
+      <button type="button" class="btnMinimizarVehiculo" title="Minimizar o abrir">
         <i class="fas fa-minus"></i>
       </button>
     </div>
-    <div class="carro-contenido">
-      <div class="carro-grid">
-        <div class="carro-campo">
+    <div class="Vehiculo-contenido">
+      <div class="Vehiculo-grid">
+        <div class="Vehiculo-campo">
           <label>Marca
-            <input type="text" name="marca" placeholder="Marca del carro..." />
+            <input type="text" name="marca" placeholder="Marca del Vehiculo..." />
           </label>
         </div>
-        <div class="carro-campo">
+        <div class="Vehiculo-campo">
           <label>Modelo
-            <input type="text" name="modelo" placeholder="Modelo del carro..." />
+            <input type="text" name="modelo" placeholder="Modelo del Vehiculo..." />
           </label>
         </div>
-        <div class="carro-campo">
+        <div class="Vehiculo-campo">
           <label>No. Serie
-            <input type="text" name="numero_serie" placeholder="No. serie del carro..." />
+            <input type="text" name="numero_serie" placeholder="No. serie del Vehiculo..." />
           </label>
         </div>
-        <div class="carro-campo">
+        <div class="Vehiculo-campo">
           <label>Tipo
-            <input type="text" name="tipo" placeholder="Tipo del carro..." />
+            <input type="text" name="tipo" placeholder="Tipo del Vehiculo..." />
           </label>
         </div>
-        <div class="carro-campo">
+        <div class="Vehiculo-campo">
           <label>No. Placa
-            <input type="text" name="numero_placa" placeholder="No. placa del carro..." />
+            <input type="text" name="numero_placa" placeholder="No. placa del Vehiculo..." />
           </label>
         </div>
       </div>
 
-      <div class="personas-carro">
+      <div class="personas-Vehiculo">
         <div>
           <h4>Personas involucradas</h4>
-          <label class="carro-campo">No. Personas
-            <input type="number" min="0" name="numero_personas" placeholder="Número de personas" />
+          <label class="Vehiculo-campo">No. Personas
+            <input type="number" min="0" name="numero_personas" placeholder="NÃºmero de personas" />
           </label>
         </div>
         <div>
@@ -206,8 +206,8 @@ function crearCarro() {
         </div>
         <div>
           <h4>Personas heridas</h4>
-          <label class="carro-campo">¿Cuántas personas hubo heridas?
-            <input type="number" min="0" name="numero_heridos" placeholder="Número de personas heridas" />
+          <label class="Vehiculo-campo">Â¿CuÃ¡ntas personas hubo heridas?
+            <input type="number" min="0" name="numero_heridos" placeholder="NÃºmero de personas heridas" />
           </label>
           <h4>Gravedad</h4>
           <div class="gravedad-grid">
@@ -221,16 +221,16 @@ function crearCarro() {
     </div>
   `;
 
-  contenedorCarros.appendChild(carro);
+  contenedorVehiculos.appendChild(Vehiculo);
 }
 
-/** Abre el modal de crear parte y prepara catalogos/carro inicial. */
+/** Abre el modal de crear parte y prepara catalogos/Vehiculo inicial. */
 function abrirModalParte() {
   if (!token) {
     Swal.fire({
       icon: "warning",
-      title: "Inicia sesión",
-      text: "Necesitas iniciar sesión para crear un parte.",
+      title: "Inicia sesiÃ³n",
+      text: "Necesitas iniciar sesiÃ³n para crear un parte.",
       confirmButtonColor: "#030b5d",
     }).then(() => {
       window.location.href = "/registroUsuarios/login.html";
@@ -241,8 +241,8 @@ function abrirModalParte() {
   modalParte.classList.remove("oculto");
   cargarCatalogos();
 
-  if (contenedorCarros.children.length === 0) {
-    crearCarro();
+  if (contenedorVehiculos.children.length === 0) {
+    crearVehiculo();
   }
 }
 
@@ -251,30 +251,30 @@ function cerrarModalParte() {
   modalParte.classList.add("oculto");
 }
 
-/** Lee y limpia el valor de un campo dentro de una tarjeta de carro. */
-function obtenerValor(carro, nombreCampo) {
-  const campo = carro.querySelector(`[name="${nombreCampo}"]`);
+/** Lee y limpia el valor de un campo dentro de una tarjeta de Vehiculo. */
+function obtenerValor(Vehiculo, nombreCampo) {
+  const campo = Vehiculo.querySelector(`[name="${nombreCampo}"]`);
   return campo ? campo.value.trim() : "";
 }
 
-/** Convierte todas las tarjetas de carro en objetos para enviarlos a la API. */
-function obtenerCarros() {
-  return [...contenedorCarros.querySelectorAll(".carro-parte")].map((carro) => {
-    const numero = carro.dataset.numero;
-    const gravedad = carro.querySelector(`[name="gravedad_${numero}"]:checked`);
+/** Convierte todas las tarjetas de Vehiculo en objetos para enviarlos a la API. */
+function obtenerVehiculos() {
+  return [...contenedorVehiculos.querySelectorAll(".Vehiculo-parte")].map((Vehiculo) => {
+    const numero = Vehiculo.dataset.numero;
+    const gravedad = Vehiculo.querySelector(`[name="gravedad_${numero}"]:checked`);
 
     return {
-      marca: obtenerValor(carro, "marca"),
-      modelo: obtenerValor(carro, "modelo"),
-      tipo: obtenerValor(carro, "tipo"),
-      numero_serie: obtenerValor(carro, "numero_serie"),
-      numero_placa: obtenerValor(carro, "numero_placa"),
+      marca: obtenerValor(Vehiculo, "marca"),
+      modelo: obtenerValor(Vehiculo, "modelo"),
+      tipo: obtenerValor(Vehiculo, "tipo"),
+      numero_serie: obtenerValor(Vehiculo, "numero_serie"),
+      numero_placa: obtenerValor(Vehiculo, "numero_placa"),
       personas: {
-        numero_personas: obtenerValor(carro, "numero_personas"),
-        personas_fallecidas: carro.querySelector('[name="personas_fallecidas"]').checked,
-        personas_heridas: carro.querySelector('[name="personas_heridas"]').checked,
-        otros: carro.querySelector('[name="otros"]').checked,
-        numero_heridos: obtenerValor(carro, "numero_heridos"),
+        numero_personas: obtenerValor(Vehiculo, "numero_personas"),
+        personas_fallecidas: Vehiculo.querySelector('[name="personas_fallecidas"]').checked,
+        personas_heridas: Vehiculo.querySelector('[name="personas_heridas"]').checked,
+        otros: Vehiculo.querySelector('[name="otros"]').checked,
+        numero_heridos: obtenerValor(Vehiculo, "numero_heridos"),
         gravedad: gravedad ? gravedad.value : "Sin clasificar",
       },
     };
@@ -291,7 +291,7 @@ async function guardarParte(e) {
     hora: document.getElementById("horaParte").value,
     id_mp: mpParte.value,
     id_respondiente: respondienteParte.value,
-    vehiculos: obtenerCarros(),
+    vehiculos: obtenerVehiculos(),
   };
 
   try {
@@ -310,7 +310,7 @@ async function guardarParte(e) {
       Swal.fire({
         icon: "error",
         title: "No se pudo crear",
-        text: resultado.error || "Revisa la información del parte.",
+        text: resultado.error || "Revisa la informaciÃ³n del parte.",
         confirmButtonColor: "#030b5d",
       });
       return;
@@ -324,9 +324,9 @@ async function guardarParte(e) {
     });
 
     formParte.reset();
-    contenedorCarros.innerHTML = "";
-    contadorCarros = 0;
-    crearCarro();
+    contenedorVehiculos.innerHTML = "";
+    contadorVehiculos = 0;
+    crearVehiculo();
     cerrarModalParte();
     cargarPartes(buscarPartes.value.trim());
   } catch (error) {
@@ -352,14 +352,14 @@ function alternarDesplegable(panel) {
   if (!estabaAbierto) panel.classList.add("abierto");
 }
 
-/** Confirma el cierre de sesión, limpia datos locales y vuelve al login. */
+/** Confirma el cierre de sesiÃ³n, limpia datos locales y vuelve al login. */
 function cerrarSesion() {
   Swal.fire({
-    title: "Cerrar sesión",
-    text: "Tu sesión actual se cerrará.",
+    title: "Cerrar sesiÃ³n",
+    text: "Tu sesiÃ³n actual se cerrarÃ¡.",
     icon: "question",
     showCancelButton: true,
-    confirmButtonText: "Cerrar sesión",
+    confirmButtonText: "Cerrar sesiÃ³n",
     cancelButtonText: "Cancelar",
     confirmButtonColor: "#030b5d",
   }).then((result) => {
@@ -409,13 +409,14 @@ linkGestionarPartes.addEventListener("click", (e) => {
 });
 btnCerrarModal.addEventListener("click", cerrarModalParte);
 btnCancelarParte.addEventListener("click", cerrarModalParte);
-btnAgregarCarro.addEventListener("click", crearCarro);
+btnAgregarVehiculo.addEventListener("click", crearVehiculo);
 formParte.addEventListener("submit", guardarParte);
-contenedorCarros.addEventListener("click", (e) => {
-  const boton = e.target.closest(".btnMinimizarCarro");
+contenedorVehiculos.addEventListener("click", (e) => {
+  const boton = e.target.closest(".btnMinimizarVehiculo");
   if (!boton) return;
 
-  const carro = boton.closest(".carro-parte");
-  carro.classList.toggle("minimizado");
-  boton.innerHTML = carro.classList.contains("minimizado") ? '<i class="fas fa-plus"></i>' : '<i class="fas fa-minus"></i>';
+  const Vehiculo = boton.closest(".Vehiculo-parte");
+  Vehiculo.classList.toggle("minimizado");
+  boton.innerHTML = Vehiculo.classList.contains("minimizado") ? '<i class="fas fa-plus"></i>' : '<i class="fas fa-minus"></i>';
 });
+

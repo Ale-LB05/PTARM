@@ -6,6 +6,10 @@ const { recordActivity } = require("../utils/activity");
 const router = express.Router();
 let peopleExtraColumnsReady = false;
 let peopleDetailTableReady = false;
+let partLocationColumnsReady = false;
+let vehicleCorralonColumnReady = false;
+let corralonesTableReady = false;
+let partTypeColumnReady = false;
 
 /** Asegura columnas para guardar datos especificos de fallecidos en bases existentes. */
 async function ensurePeopleExtraColumns() {
@@ -47,6 +51,91 @@ async function ensurePeopleDetailTable() {
   peopleDetailTableReady = true;
 }
 
+/** Asegura columnas de ubicacion/kilometraje para partes existentes. */
+async function ensurePartLocationColumns() {
+  if (partLocationColumnsReady) return;
+  const [columns] = await db.query("SHOW COLUMNS FROM partes");
+  const names = new Set(columns.map((column) => column.Field));
+  if (!names.has("ubicacion_kilometro")) {
+    await db.query("ALTER TABLE partes ADD COLUMN ubicacion_kilometro varchar(120) DEFAULT NULL AFTER hora");
+  }
+  if (!names.has("ubicacion_direccion")) {
+    await db.query("ALTER TABLE partes ADD COLUMN ubicacion_direccion varchar(255) DEFAULT NULL AFTER ubicacion_kilometro");
+  }
+  if (!names.has("ubicacion_lat")) {
+    await db.query("ALTER TABLE partes ADD COLUMN ubicacion_lat decimal(10,7) DEFAULT NULL AFTER ubicacion_direccion");
+  }
+  if (!names.has("ubicacion_lng")) {
+    await db.query("ALTER TABLE partes ADD COLUMN ubicacion_lng decimal(10,7) DEFAULT NULL AFTER ubicacion_lat");
+  }
+  if (!names.has("google_place_id")) {
+    await db.query("ALTER TABLE partes ADD COLUMN google_place_id varchar(180) DEFAULT NULL AFTER ubicacion_lng");
+  }
+  partLocationColumnsReady = true;
+}
+
+/** Asegura el motivo/tipo general del parte. */
+async function ensurePartTypeColumn() {
+  if (partTypeColumnReady) return;
+  const [columns] = await db.query("SHOW COLUMNS FROM partes");
+  if (!columns.some((column) => column.Field === "tipo_parte")) {
+    await db.query("ALTER TABLE partes ADD COLUMN tipo_parte varchar(80) DEFAULT NULL AFTER folio");
+  }
+  partTypeColumnReady = true;
+}
+
+/** Asegura el catalogo de corralones. */
+async function ensureCorralonesTable() {
+  if (corralonesTableReady) return;
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS corralones (
+      id_corralon int(11) NOT NULL AUTO_INCREMENT,
+      nombre varchar(180) NOT NULL,
+      direccion varchar(255) DEFAULT NULL,
+      telefono varchar(40) DEFAULT NULL,
+      activo tinyint(1) NOT NULL DEFAULT 1,
+      fecha_creacion timestamp NOT NULL DEFAULT current_timestamp(),
+      PRIMARY KEY (id_corralon),
+      UNIQUE KEY uk_corralones_nombre (nombre)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  );
+  corralonesTableReady = true;
+}
+
+/** Asegura el campo de corralon para cada vehiculo. */
+async function ensureVehicleCorralonColumn() {
+  if (vehicleCorralonColumnReady) return;
+  const [columns] = await db.query("SHOW COLUMNS FROM vehiculos");
+  const names = new Set(columns.map((column) => column.Field));
+  if (!names.has("tipo_vehiculo")) {
+    await db.query("ALTER TABLE vehiculos ADD COLUMN tipo_vehiculo enum('Vehiculo','Moto','Camioneta','Camion','Bicicleta','Otro') NOT NULL DEFAULT 'Vehiculo' AFTER numero_vehiculo");
+  }
+  if (!names.has("corralon")) {
+    await db.query("ALTER TABLE vehiculos ADD COLUMN corralon varchar(180) DEFAULT NULL AFTER numero_placa");
+  }
+  if (!names.has("id_corralon")) {
+    await db.query("ALTER TABLE vehiculos ADD COLUMN id_corralon int(11) DEFAULT NULL AFTER corralon");
+  }
+  if (!names.has("estatus_vehiculo")) {
+    await db.query("ALTER TABLE vehiculos ADD COLUMN estatus_vehiculo varchar(80) DEFAULT NULL AFTER id_corralon");
+  }
+  if (!names.has("danos_vehiculo")) {
+    await db.query("ALTER TABLE vehiculos ADD COLUMN danos_vehiculo text DEFAULT NULL AFTER estatus_vehiculo");
+  }
+  vehicleCorralonColumnReady = true;
+}
+
+/** Busca o crea un corralon del catalogo. */
+async function findOrCreateCorralon(nombre) {
+  await ensureCorralonesTable();
+  const clean = nullable(nombre);
+  if (!clean) return null;
+  const [rows] = await db.query("SELECT id_corralon AS id FROM corralones WHERE nombre = ? LIMIT 1", [clean]);
+  if (rows[0]) return rows[0].id;
+  const [result] = await db.query("INSERT INTO corralones (nombre) VALUES (?)", [clean]);
+  return result.insertId;
+}
+
 /** Permite modificar partes solo a Administrador y Capturista. */
 function requirePartesWrite(req, res, next) {
   if (!canAccess(req.user, ["Administrador", "Capturista"])) {
@@ -85,6 +174,10 @@ async function findOrCreate(table, idColumn, nombre) {
 async function getPartById(id) {
   await ensurePeopleExtraColumns();
   await ensurePeopleDetailTable();
+  await ensurePartLocationColumns();
+  await ensurePartTypeColumn();
+  await ensureCorralonesTable();
+  await ensureVehicleCorralonColumn();
   const [rows] = await db.query(
     `SELECT
        p.*,
@@ -114,10 +207,15 @@ async function getPartById(id) {
   if (!parte) return null;
 
   const [vehiculos] = await db.query(
-    `SELECT id_vehiculo, numero_vehiculo, marca, modelo, tipo, numero_serie, numero_placa
-     FROM vehiculos
-     WHERE id_parte = ?
-     ORDER BY numero_vehiculo, id_vehiculo`,
+    `SELECT v.id_vehiculo, v.numero_vehiculo, v.tipo_vehiculo, v.marca, v.modelo, v.tipo, v.numero_serie, v.numero_placa,
+       COALESCE(c.nombre, v.corralon) AS corralon,
+       v.id_corralon,
+       v.estatus_vehiculo,
+       v.danos_vehiculo
+     FROM vehiculos v
+     LEFT JOIN corralones c ON c.id_corralon = v.id_corralon
+     WHERE v.id_parte = ?
+     ORDER BY v.numero_vehiculo, v.id_vehiculo`,
     [id],
   );
   parte.vehiculos = vehiculos;
@@ -155,14 +253,21 @@ async function getPartById(id) {
     parte.tipo = firstVehicle.tipo;
     parte.numero_serie = firstVehicle.numero_serie;
     parte.numero_placa = firstVehicle.numero_placa;
+    parte.corralon = firstVehicle.corralon;
+    parte.estatus_vehiculo = firstVehicle.estatus_vehiculo;
+    parte.danos_vehiculo = firstVehicle.danos_vehiculo;
   }
   return parte;
 }
 
 // Lista partes resumidos para tablas, tarjetas, inicio y modal de exportacion.
 router.get("/", async (req, res) => {
+  await ensurePartLocationColumns();
+  await ensurePartTypeColumn();
+  await ensureVehicleCorralonColumn();
   const advancedFields = {
     folio: "p.folio",
+    tipo_parte: "p.tipo_parte",
     fecha: "p.fecha",
     hora: "p.hora",
     estado: "p.estado",
@@ -174,6 +279,9 @@ router.get("/", async (req, res) => {
     serie: "v.numero_serie",
     marca: "v.marca",
     modelo: "v.modelo",
+    corralon: "v.corralon",
+    estatus_vehiculo: "v.estatus_vehiculo",
+    danos_vehiculo: "v.danos_vehiculo",
   };
   const advancedField = String(req.query.advancedField || "").trim();
   const advancedValue = String(req.query.advancedValue || "").trim();
@@ -191,9 +299,9 @@ router.get("/", async (req, res) => {
   } else {
     const q = `%${(req.query.q || "").trim()}%`;
     const hasSearch = q !== "%%";
-    params = hasSearch ? [q, q, q, q, q, q] : [];
+    params = hasSearch ? [q, q, q, q, q, q, q, q, q, q] : [];
     where = hasSearch
-    ? `WHERE p.folio LIKE ? OR mp.nombre LIKE ? OR r.nombre LIKE ? OR u.nombre LIKE ? OR v.numero_placa LIKE ? OR v.numero_serie LIKE ?`
+    ? `WHERE p.folio LIKE ? OR p.tipo_parte LIKE ? OR mp.nombre LIKE ? OR r.nombre LIKE ? OR u.nombre LIKE ? OR v.numero_placa LIKE ? OR v.numero_serie LIKE ? OR v.corralon LIKE ? OR v.estatus_vehiculo LIKE ? OR v.danos_vehiculo LIKE ?`
     : "";
   }
 
@@ -201,6 +309,7 @@ router.get("/", async (req, res) => {
     `SELECT
        p.id_parte,
        p.folio,
+       p.tipo_parte,
        p.fecha,
        p.hora,
        p.estado,
@@ -212,7 +321,10 @@ router.get("/", async (req, res) => {
        GROUP_CONCAT(DISTINCT v.numero_placa SEPARATOR ' | ') AS placas,
        GROUP_CONCAT(DISTINCT v.numero_serie SEPARATOR ' | ') AS series,
        GROUP_CONCAT(DISTINCT v.marca SEPARATOR ' | ') AS marcas,
-       GROUP_CONCAT(DISTINCT v.modelo SEPARATOR ' | ') AS modelos
+       GROUP_CONCAT(DISTINCT v.modelo SEPARATOR ' | ') AS modelos,
+       GROUP_CONCAT(DISTINCT v.corralon SEPARATOR ' | ') AS corralones,
+       GROUP_CONCAT(DISTINCT v.estatus_vehiculo SEPARATOR ' | ') AS estatus_vehiculos,
+       GROUP_CONCAT(DISTINCT v.danos_vehiculo SEPARATOR ' | ') AS danos_vehiculos
      FROM partes p
      LEFT JOIN ministerios_publicos mp ON mp.id_mp = p.id_mp
      LEFT JOIN respondientes r ON r.id_respondiente = p.id_respondiente
@@ -229,10 +341,12 @@ router.get("/", async (req, res) => {
 
 // Devuelve MP y respondientes activos para los campos buscables del formulario.
 router.get("/catalogos", async (req, res) => {
+  await ensureCorralonesTable();
   const [mps] = await db.query("SELECT id_mp, nombre FROM ministerios_publicos WHERE activo = 1 ORDER BY nombre");
   const [respondientes] = await db.query("SELECT id_respondiente, nombre FROM respondientes WHERE activo = 1 ORDER BY nombre");
+  const [corralones] = await db.query("SELECT id_corralon, nombre, direccion, telefono FROM corralones WHERE activo = 1 ORDER BY nombre");
 
-  res.json({ success: true, data: { mps, respondientes } });
+  res.json({ success: true, data: { mps, respondientes, corralones } });
 });
 
 // Registra en historial que un usuario exporto partes.
@@ -247,6 +361,19 @@ router.post("/export", requirePartesExport, async (req, res) => {
   res.json({ success: true, message: "Exportacion registrada" });
 });
 
+// Devuelve el historial de cambios de un parte especifico.
+router.get("/:id/historial", async (req, res) => {
+  const [rows] = await db.query(
+    `SELECT h.id_historial, h.accion, h.descripcion, h.fecha, u.nombre AS usuario_nombre, u.imagen_perfil AS usuario_foto
+     FROM historial_cambios h
+     LEFT JOIN usuarios u ON u.id_usuario = h.id_usuario
+     WHERE h.id_parte = ?
+     ORDER BY h.fecha DESC, h.id_historial DESC`,
+    [req.params.id],
+  );
+  res.json({ success: true, data: rows });
+});
+
 // Devuelve un parte completo por id para ver o editar.
 router.get("/:id", async (req, res) => {
   const parte = await getPartById(req.params.id);
@@ -256,18 +383,27 @@ router.get("/:id", async (req, res) => {
 
 // Crea un parte, sus detalles y el registro de historial.
 router.post("/", requirePartesWrite, async (req, res) => {
+  await ensurePartLocationColumns();
+  await ensurePartTypeColumn();
   const data = req.body;
   const folio = nullable(data.folio) || `FIG-${Date.now()}`;
   const idMp = nullable(data.id_mp) || await findOrCreate("ministerios_publicos", "id_mp", data.mp_nombre);
   const idRespondiente = await findOrCreate("respondientes", "id_respondiente", data.respondiente_nombre);
 
   const [result] = await db.query(
-    `INSERT INTO partes (folio, fecha, hora, id_mp, id_respondiente, estado, gravedad_general, creado_por, asignado_a)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO partes
+     (folio, tipo_parte, fecha, hora, ubicacion_kilometro, ubicacion_direccion, ubicacion_lat, ubicacion_lng, google_place_id, id_mp, id_respondiente, estado, gravedad_general, creado_por, asignado_a)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       folio,
+      nullable(data.tipo_parte),
       nullable(data.fecha),
       nullable(data.hora),
+      nullable(data.ubicacion_kilometro),
+      nullable(data.ubicacion_direccion),
+      nullable(data.ubicacion_lat),
+      nullable(data.ubicacion_lng),
+      nullable(data.google_place_id),
       idMp,
       idRespondiente,
       nullable(data.estado) || "Activo",
@@ -291,6 +427,8 @@ router.post("/", requirePartesWrite, async (req, res) => {
 
 // Actualiza un parte existente y registra el cambio en historial.
 router.put("/:id", requirePartesWrite, async (req, res) => {
+  await ensurePartLocationColumns();
+  await ensurePartTypeColumn();
   const data = req.body;
   const idParte = req.params.id;
   const currentParte = await getPartById(idParte);
@@ -300,12 +438,18 @@ router.put("/:id", requirePartesWrite, async (req, res) => {
 
   await db.query(
     `UPDATE partes
-     SET folio = ?, fecha = ?, hora = ?, id_mp = ?, id_respondiente = ?, estado = ?, gravedad_general = ?, asignado_a = ?
+     SET folio = ?, tipo_parte = ?, fecha = ?, hora = ?, ubicacion_kilometro = ?, ubicacion_direccion = ?, ubicacion_lat = ?, ubicacion_lng = ?, google_place_id = ?, id_mp = ?, id_respondiente = ?, estado = ?, gravedad_general = ?, asignado_a = ?
      WHERE id_parte = ?`,
     [
       folio,
+      nullable(data.tipo_parte),
       nullable(data.fecha),
       nullable(data.hora),
+      nullable(data.ubicacion_kilometro),
+      nullable(data.ubicacion_direccion),
+      nullable(data.ubicacion_lat),
+      nullable(data.ubicacion_lng),
+      nullable(data.google_place_id),
       idMp,
       idRespondiente,
       nullable(data.estado) || "Activo",
@@ -343,6 +487,8 @@ router.delete("/:id", requirePartesWrite, async (req, res) => {
 async function upsertDetails(idParte, data) {
   await ensurePeopleExtraColumns();
   await ensurePeopleDetailTable();
+  await ensureVehicleCorralonColumn();
+  await ensureCorralonesTable();
   const vehiculos = normalizeVehicles(data);
   await db.query("DELETE FROM personas_involucradas_detalle WHERE id_parte = ?", [idParte]);
   await db.query("DELETE FROM vehiculos WHERE id_parte = ?", [idParte]);
@@ -350,17 +496,23 @@ async function upsertDetails(idParte, data) {
   let idVehiculo = null;
   const vehicleIdsByNumber = new Map();
   for (const [index, vehiculo] of vehiculos.entries()) {
+    const idCorralon = await findOrCreateCorralon(vehiculo.corralon);
     const [result] = await db.query(
-      `INSERT INTO vehiculos (id_parte, numero_vehiculo, marca, modelo, tipo, numero_serie, numero_placa)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO vehiculos (id_parte, numero_vehiculo, tipo_vehiculo, marca, modelo, tipo, numero_serie, numero_placa, corralon, id_corralon, estatus_vehiculo, danos_vehiculo)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         idParte,
         index + 1,
+        validVehicleType(vehiculo.tipo_vehiculo),
         nullable(vehiculo.marca),
         nullable(vehiculo.modelo),
         nullable(vehiculo.tipo),
         nullable(vehiculo.numero_serie),
         nullable(vehiculo.numero_placa),
+        nullable(vehiculo.corralon),
+        idCorralon,
+        nullable(vehiculo.estatus_vehiculo) || "Sin clasificar",
+        nullable(vehiculo.danos_vehiculo),
       ],
     );
     if (!idVehiculo) idVehiculo = result.insertId;
@@ -431,18 +583,28 @@ function normalizeVehicles(data) {
   if (!vehiculos.length) {
     vehiculos = [
       {
+        tipo_vehiculo: data.tipo_vehiculo,
         marca: data.marca,
         modelo: data.modelo,
         tipo: data.tipo,
         numero_serie: data.numero_serie,
         numero_placa: data.numero_placa,
+        corralon: data.corralon,
+        estatus_vehiculo: data.estatus_vehiculo,
+        danos_vehiculo: data.danos_vehiculo,
       },
     ];
   }
 
   return vehiculos.filter((vehiculo) =>
-    ["marca", "modelo", "tipo", "numero_serie", "numero_placa"].some((key) => nullable(vehiculo[key])),
+    ["tipo_vehiculo", "marca", "modelo", "tipo", "numero_serie", "numero_placa", "corralon", "estatus_vehiculo", "danos_vehiculo"].some((key) => nullable(vehiculo[key])),
   );
+}
+
+/** Normaliza la clase general del vehiculo. */
+function validVehicleType(value) {
+  const clean = nullable(value) || "Vehiculo";
+  return ["Vehiculo", "Moto", "Camioneta", "Camion", "Bicicleta", "Otro"].includes(clean) ? clean : "Vehiculo";
 }
 
 /** Normaliza el listado individual de personas involucradas. */
