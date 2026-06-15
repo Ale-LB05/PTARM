@@ -1,4 +1,4 @@
-﻿<?php require_once __DIR__ . '/config/db.php'; ?>
+﻿<?php require_once __DIR__ . '/../config/db.php'; ?>
 <!doctype html>
 <html lang="es">
   <head>
@@ -24,7 +24,7 @@
         background: #0b1220;
       }
     </style>
-    <title>Partes de tránsito</title>
+    <title>Crear administrador</title>
     <link rel="icon" type="image/png" href="<?= app_url('img/logot.png') ?>" />
     <link href="<?= app_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" />
     <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260615alertfix3" />
@@ -33,21 +33,18 @@
   <body class="auth-page">
     <main class="login-card">
       <img src="<?= app_url('img/Logo.png') ?>" alt="FGE" />
-      <h1>Partes de tránsito</h1>
-      <h2>Iniciar sesión</h2>
-      <p>Ingresa tu correo electrónico o CURP para iniciar sesión</p>
-      <form id="loginForm">
-        <input type="text" name="usuario" placeholder="Correo electrónico o CURP" required />
-        <div class="password-wrap">
-          <input type="password" name="password" placeholder="Contraseña" required />
-          <button type="button" onclick="togglePassword(this)" aria-label="Mostrar contraseña"><i class="fas fa-eye"></i></button>
-        </div>
-        <button type="submit">Iniciar sesión</button>
+      <h1>Crear administrador</h1>
+      <p>Antes de usar el sistema crea el primer usuario administrador.</p>
+      <form id="setupForm">
+        <input type="text" name="nombre" placeholder="Nombre completo" required />
+        <input type="email" name="correo" placeholder="correo@dominio.com" required />
+        <input type="text" name="curp" maxlength="18" placeholder="CURP" />
+        <input type="password" name="password" placeholder="Contraseña" required />
+        <input type="text" name="instituto" placeholder="Instituto" />
+        <input type="text" name="cargo_grado" placeholder="Cargo/Grado" />
+        <button type="submit">Crear administrador</button>
       </form>
-      <p><small>Al hacer clic en Continuar aceptas nuestros términos de servicio y políticas.</small></p>
     </main>
-    <script src="<?= app_url('vendor/jquery/jquery.min.js') ?>"></script>
-    <script src="<?= app_url('vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
     <script src="<?= app_url('js/auth.js') ?>?v=20260615alertfix3"></script>
   </body>
 </html>

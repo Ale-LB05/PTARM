@@ -1,0 +1,314 @@
+﻿<?php require_once __DIR__ . '/../config/db.php'; ?>
+<!doctype html>
+<html lang="es">
+  <head>
+    <script>window.PTARM_BASE = <?= json_encode(app_base()) ?>;</script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const root = document.documentElement;
+        root.classList.add("booting");
+        try {
+          const isDark = localStorage.getItem("theme") === "dark";
+          root.dataset.theme = isDark ? "dark" : "light";
+          root.classList.toggle("theme-dark", isDark);
+          root.classList.toggle("sidebar-start-collapsed", localStorage.getItem("sidebarCollapsed") === "1");
+        } catch (_) {
+          root.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <style>
+      html.booting[data-theme="dark"],
+      html.booting[data-theme="dark"] body {
+        background: #0b1220;
+      }
+    </style>
+    <title>Perfil | PTARM</title>
+    <link rel="icon" type="image/png" href="<?= app_url('img/logot.png') ?>" />
+    <link href="<?= app_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" />
+    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260615alertfix3" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="side-brand" href="<?= app_url('cruds/inicio.php') ?>">
+          <span class="brand-icon"><img src="<?= app_url('img/logot.png') ?>" alt="PTARM" /></span>
+          <span class="brand-text">PTARM</span>
+        </a>
+        <nav class="side-nav">
+          <a data-page="inicio" href="<?= app_url('cruds/inicio.php') ?>"
+            ><span class="nav-icon"><img src="<?= app_url('img/iconos/Inicio.png') ?>" alt="" /></span
+            ><span>Inicio</span></a
+          >
+          <div class="side-section">Administración</div>
+          <a data-page="personal" href="<?= app_url('cruds/personal.php') ?>"
+            ><span class="nav-icon"><img src="<?= app_url('img/iconos/personal.png') ?>" alt="" /></span
+            ><span>Personal</span></a
+          ><a data-page="partes" href="<?= app_url('registroPartes/partes.php') ?>"
+            ><span class="nav-icon"
+              ><img src="<?= app_url('img/iconos/gestion.png') ?>" alt="" /></span
+            ><span>Gestionar partes</span></a
+          ><a data-page="historial" href="<?= app_url('cruds/historial.php') ?>"
+            ><span class="nav-icon"><img src="<?= app_url('img/iconos/historial.png') ?>" alt="" /></span
+            ><span>Historial</span></a
+          >
+          <div class="side-section">Sesión</div>
+          <button onclick="logout()">
+            <span class="nav-icon"><img src="<?= app_url('img/iconos/salida.png') ?>" alt="" /></span
+            ><span>Cerrar sesión</span></button
+          ><button class="collapse-btn" onclick="toggleSidebar()">
+            <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
+            ><span>Ocultar</span>
+          </button>
+        </nav>
+      </aside>
+      <main class="content">
+        <header class="topbar">
+          <a class="topbar-brand" href="<?= app_url('cruds/inicio.php') ?>">
+            <img class="logo" src="<?= app_url('img/Logo.png') ?>" alt="FGE" />
+            <span>Sistema de partes</span>
+          </a>
+          <div class="user-menu">
+            <button class="user-top" type="button">
+              <i class="fas fa-bell"></i><span data-user-name></span
+              ><img data-user-photo alt="Perfil" />
+            </button>
+            <div class="user-dropdown animated--grow-in">
+              <a href="<?= app_url('cruds/perfil.php') ?>"><i class="fas fa-user"></i> Perfil</a
+              >
+            </div>
+          </div>
+        </header>
+        <section class="page">
+          <div class="profile-page-head">
+            <h1>Mi Perfil</h1>
+            <button class="btn blue outline theme-toggle-btn" id="themeToggleBtn" type="button">
+              <i class="fas fa-moon"></i> Modo oscuro
+            </button>
+          </div>
+          <form id="profileForm" class="profile-layout account-layout">
+            <div>
+              <img
+                id="profilePhoto"
+                class="profile-avatar"
+                src="<?= app_url('img/usuario.png') ?>"
+                alt="Perfil" />
+            </div>
+            <div class="account-card">
+              <h3>Información de cuenta</h3>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>Nombre</span>
+                </div>
+                <strong id="profileName">Usuario</strong>
+                <span></span>
+              </div>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>Correo</span>
+                </div>
+                <strong id="profileEmail">correo@dominio.com</strong>
+                <button
+                  class="account-action"
+                  type="button"
+                  id="openEmailModal"
+                  title="Editar correo"
+                >
+                  <i class="fas fa-pen"></i>
+                </button>
+              </div>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>CURP</span>
+                </div>
+                <strong id="profileCurp">Sin CURP registrada</strong>
+                <button
+                  class="account-action"
+                  type="button"
+                  id="openCurpModal"
+                  title="Editar CURP"
+                >
+                  <i class="fas fa-id-card"></i>
+                </button>
+              </div>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>Contraseña</span>
+                </div>
+                <strong>••••••••</strong>
+                <button
+                  class="account-action"
+                  type="button"
+                  id="openPasswordModal"
+                  title="Cambiar contraseña"
+                >
+                  <i class="fas fa-key"></i>
+                </button>
+              </div>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>Cargo</span>
+                </div>
+                <strong id="profileCargo">Sin cargo</strong>
+                <span></span>
+              </div>
+              <div class="account-row">
+                <div class="account-label">
+                  <span>Institución</span>
+                </div>
+                <strong id="profileInstitute">Sin institución</strong>
+                <span></span>
+              </div>
+            </div>
+          </form>
+          <h1 style="margin-top: 70px">Mis partes creados o asignados</h1>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Folio</th>
+                  <th>Nombre</th>
+                  <th>Vencimiento</th>
+                  <th>Fecha</th>
+                  <th>MP</th>
+                </tr>
+              </thead>
+              <tbody id="profilePartes"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+    <div id="emailModal" class="modal-backdrop">
+      <div class="modal profile-modal">
+        <div class="modal-title profile-modal-title">
+          <h2>Editar correo</h2>
+          <button class="modal-close" onclick="closeProfileModal('emailModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="emailForm" class="modal-body">
+          <h3 class="modal-section-title">
+            Actualización de contacto
+          </h3>
+          <label class="input-with-icon"
+            >Nuevo correo electrónico
+            <span>
+              <input type="email" name="correo" placeholder="correo@dominio.com" />
+            </span></label
+          >
+          <div class="form-actions">
+            <button class="btn red outline" type="button" onclick="closeProfileModal('emailModal')">
+              Cancelar</button
+            ><button class="btn teal" type="submit">
+              <i class="fas fa-save"></i> Actualizar correo
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="passwordModal" class="modal-backdrop">
+      <div class="modal profile-modal">
+        <div class="modal-title profile-modal-title">
+          <h2>Seguridad</h2>
+          <button class="modal-close" onclick="closeProfileModal('passwordModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="passwordForm" class="modal-body">
+          <h3 class="modal-section-title">
+            Cambio de contraseña
+          </h3>
+          <label class="input-with-icon"
+            >Contraseña actual
+            <span>
+              <input type="password" name="current_password" placeholder="Ingresa tu clave actual" />
+              <button type="button" class="toggle-secret" title="Mostrar contraseña">
+                <i class="fas fa-eye"></i>
+              </button>
+            </span></label
+          >
+          <label class="input-with-icon"
+            >Nueva contraseña
+            <span>
+              <input type="password" name="password" placeholder="Mínimo 6 caracteres" />
+              <button type="button" class="toggle-secret" title="Mostrar contraseña">
+                <i class="fas fa-eye"></i>
+              </button>
+            </span></label
+          >
+          <label class="input-with-icon"
+            >Confirmar nueva contraseña
+            <span>
+              <input type="password" name="confirm_password" placeholder="Repite la nueva clave" />
+              <button type="button" class="toggle-secret" title="Mostrar contraseña">
+                <i class="fas fa-eye"></i>
+              </button>
+            </span></label
+          >
+          <div class="form-actions">
+            <button class="btn red outline" type="button" onclick="closeProfileModal('passwordModal')">
+              Cancelar</button
+            ><button class="btn teal" type="submit">
+              <i class="fas fa-save"></i> Cambiar contraseña
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="curpModal" class="modal-backdrop">
+      <div class="modal profile-modal">
+        <div class="modal-title profile-modal-title">
+          <h2>Editar CURP</h2>
+          <button class="modal-close" onclick="closeProfileModal('curpModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="curpForm" class="modal-body">
+          <h3 class="modal-section-title">
+            Identificación del usuario
+          </h3>
+          <label class="input-with-icon"
+            >CURP
+            <span>
+              <input name="curp" maxlength="18" placeholder="Ingresa la CURP" />
+            </span></label
+          >
+          <div class="form-actions">
+            <button class="btn red outline" type="button" onclick="closeProfileModal('curpModal')">
+              Cancelar</button
+            ><button class="btn teal" type="submit">
+              <i class="fas fa-save"></i> Actualizar CURP
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="toast" class="toast"></div>
+    <div id="confirmModal" class="modal-backdrop">
+      <div class="modal small">
+        <div class="modal-title"><h2 data-confirm-title></h2></div>
+        <div class="modal-body" style="text-align: center">
+          <div class="alert-icon">!</div>
+          <p data-confirm-text></p>
+          <div class="form-actions">
+            <button class="btn" data-confirm-no>Cancelar</button
+            ><button class="btn red" data-confirm-yes>Aceptar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="<?= app_url('js/common.js') ?>?v=20260615alertfix3"></script>
+    <script src="<?= app_url('js/perfil.js') ?>?v=20260615alertfix3"></script>
+    <script src="<?= app_url('vendor/jquery/jquery.min.js') ?>"></script>
+    <script src="<?= app_url('vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
+    <script src="<?= app_url('vendor/jquery-easing/jquery.easing.min.js') ?>"></script>
+    <script src="<?= app_url('js/sb-admin-2.min.js') ?>?v=20260615alertfix3"></script>
+  </body>
+</html>
+
+
+
