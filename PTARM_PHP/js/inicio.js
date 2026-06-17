@@ -1,3 +1,9 @@
+/*
+ * Pantalla Inicio.
+ *
+ * Lo carga cruds/inicio.php. Presenta resumen de partes recientes, buscador y
+ * accesos rapidos permitidos segun el rol configurado en common.js.
+ */
 setupLayout("inicio");
 
 const homeRows = document.getElementById("homeRows");

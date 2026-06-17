@@ -1,5 +1,14 @@
+/*
+ * Pantalla Historial.
+ *
+ * Lo carga cruds/historial.php. Consulta actividad del sistema, filtra eventos,
+ * arma graficas/estadisticas y prepara exportaciones PDF/Excel del historial.
+ * Usa api() y permisos comunes definidos en common.js.
+ */
 setupLayout("historial");
 
+// Estado de filtros, paginacion y datos base usados para tabla, tarjetas,
+// grafica y exportacion.
 let historyAction = "CREAR";
 let historyItems = [];
 let historyRawItems = [];
@@ -313,7 +322,7 @@ function renderHistory() {
         return `
           <tr>
             <td class="muted-cell">${item.folio || extractFolio(item.descripcion) || "Sin folio"}</td>
-            <td><span class="history-person"><img class="avatar-mini" src="${item.usuario_foto || "/img/usuario.png"}" alt="" /> ${item.usuario_nombre || "Usuario no disponible"}</span></td>
+            <td><span class="history-person"><img class="avatar-mini" src="${item.usuario_foto || assetUrl("img/usuario.png")}" alt="" /> ${item.usuario_nombre || "Usuario no disponible"}</span></td>
             <td><span class="time-pill">${formatTime(date)}</span></td>
             <td class="muted-cell">${formatDisplayDate(date)}</td>
             <td>${renderMp(item)}</td>
@@ -334,7 +343,7 @@ function renderMp(item) {
 /** Muestra el encargado o "No aplica" cuando el historial es de exportacion. */
 function renderEncargado(item) {
   if (historyAction === "EXPORTAR") return "No aplica";
-  return `<span class="history-assignee"><img class="avatar-mini" src="${item.encargado_foto || "/img/usuario.png"}" alt="" /> ${item.encargado_nombre || "Sin asignar"}</span>`;
+  return `<span class="history-assignee"><img class="avatar-mini" src="${item.encargado_foto || assetUrl("img/usuario.png")}" alt="" /> ${item.encargado_nombre || "Sin asignar"}</span>`;
 }
 
 /** Devuelve los registros visibles segun la pagina actual. */

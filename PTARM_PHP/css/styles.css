@@ -3030,3 +3030,528 @@ html[data-theme="dark"] .avatar-mini {
     grid-template-columns: 1fr;
   }
 }
+
+/* Ajustes visuales especificos del modal de Gestionar partes. */
+#parteModal {
+  align-items: center;
+  padding: 12px;
+}
+
+#parteModal .parte-modal {
+  width: min(1060px, calc(100% - 24px));
+  max-height: min(92vh, 920px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+#parteModal .modal-title {
+  flex: 0 0 auto;
+  min-height: 60px;
+  padding: 0 20px;
+  background: linear-gradient(135deg, #12385f, #06145f);
+}
+
+#parteModal .modal-title h2 {
+  font-size: 1.08rem;
+  font-weight: 900;
+}
+
+#parteModal .modal-close {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+#parteModal .modal-body {
+  max-height: none;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 14px;
+  padding: 18px 26px 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+#parteModal .parte-form-section,
+#parteModal .location-fieldset,
+#parteModal .people-fieldset,
+#parteModal .part-history-panel {
+  border: 1px solid #dce5f1;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(18, 48, 85, 0.05);
+}
+
+#parteModal .parte-form-section {
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px 18px;
+}
+
+#parteModal .parte-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e6edf6;
+}
+
+#parteModal .parte-section-head strong,
+#parteModal .sub-row span,
+#parteModal .location-fieldset legend {
+  color: var(--navy);
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+#parteModal .parte-section-head span {
+  display: block;
+  margin-top: 2px;
+  color: #667085;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+#parteModal .form-grid {
+  gap: 14px 16px;
+}
+
+#parteModal label {
+  color: #14345a;
+  font-size: 0.88rem;
+}
+
+#parteModal input,
+#parteModal select {
+  min-height: 42px;
+  border-radius: 8px;
+}
+
+#parteModal .location-fieldset {
+  gap: 14px;
+  padding: 18px;
+}
+
+#parteModal .location-fieldset legend {
+  margin-left: 10px;
+  padding: 0 8px;
+}
+
+#parteModal .location-actions {
+  grid-template-columns: max-content max-content 1fr;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid #edf2f7;
+  padding-top: 12px;
+}
+
+#parteModal .location-actions span {
+  padding-left: 2px;
+}
+
+#parteModal .location-preview {
+  min-height: 50px;
+  border-color: #cddbef;
+  background: #f6f9ff;
+}
+
+#parteModal .sub-row {
+  margin: 0;
+  padding-bottom: 10px;
+  justify-content: space-between;
+}
+
+#parteModal .tiny-add {
+  min-height: 34px;
+  border-radius: 8px;
+}
+
+#parteModal .vehicles-wrap {
+  display: grid;
+  gap: 14px;
+}
+
+#parteModal .vehicle-card {
+  border: 1px solid #dce5f1;
+  border-radius: 10px;
+  padding: 0;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+#parteModal .vehicle-card legend {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+  border-bottom: 1px solid #e6edf6;
+  padding: 10px 14px;
+  background: #f8fafc;
+  color: var(--accent);
+  font-weight: 900;
+}
+
+#parteModal .vehicle-card legend span {
+  margin-right: auto;
+}
+
+#parteModal .vehicle-body {
+  padding: 16px 18px 18px;
+}
+
+#parteModal .people-fieldset {
+  padding: 16px 18px 18px;
+  box-shadow: none;
+}
+
+#parteModal .people-section {
+  padding-bottom: 16px;
+}
+
+#parteModal .control-section {
+  margin-bottom: 0;
+}
+
+#parteModal .form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 2px -26px 0;
+  border-top: 1px solid #dce5f1;
+  padding: 14px 26px;
+  background: rgba(248, 250, 252, 0.96);
+  backdrop-filter: blur(8px);
+}
+
+#parteModal .form-actions .btn {
+  min-width: 128px;
+}
+
+html[data-theme="dark"] #parteModal .parte-modal,
+html[data-theme="dark"] #parteModal .modal-body {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] #parteModal .parte-form-section,
+html[data-theme="dark"] #parteModal .location-fieldset,
+html[data-theme="dark"] #parteModal .people-fieldset,
+html[data-theme="dark"] #parteModal .part-history-panel,
+html[data-theme="dark"] #parteModal .vehicle-card {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: #111c31;
+}
+
+html[data-theme="dark"] #parteModal .vehicle-card legend,
+html[data-theme="dark"] #parteModal .form-actions {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.96);
+}
+
+@media (max-width: 920px) {
+  #parteModal .parte-modal {
+    width: calc(100% - 12px);
+    max-height: 94vh;
+  }
+
+  #parteModal .modal-body {
+    padding: 14px 14px 0;
+  }
+
+  #parteModal .form-actions {
+    margin-left: -14px;
+    margin-right: -14px;
+    padding: 12px 14px;
+  }
+
+  #parteModal .location-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  #parteModal {
+    padding: 0;
+  }
+
+  #parteModal .parte-modal {
+    width: 100%;
+    height: 100vh;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  #parteModal .parte-form-section,
+  #parteModal .location-fieldset,
+  #parteModal .people-fieldset,
+  #parteModal .part-history-panel {
+    border-radius: 8px;
+  }
+
+  #parteModal .form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Ajustes visuales especificos del modal de empleados. */
+#userModal {
+  align-items: center;
+  padding: 12px;
+}
+
+#userModal .user-modal {
+  width: min(940px, calc(100% - 24px));
+  max-height: min(90vh, 820px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+#userModal .modal-title {
+  flex: 0 0 auto;
+  min-height: 60px;
+  padding: 0 20px;
+  background: linear-gradient(135deg, #12385f, #06145f);
+}
+
+#userModal .modal-title h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.08rem;
+  font-weight: 900;
+}
+
+#userModal .modal-title h2::before {
+  content: "\f4ff";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  opacity: 0.92;
+}
+
+#userModal .modal-close {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 0;
+}
+
+#userModal .modal-close::before {
+  content: "\f00d";
+  font-family: "Font Awesome 5 Free";
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+#userModal .modal-body {
+  max-height: none;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 14px;
+  padding: 18px 26px 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  background: #f8fafc;
+}
+
+#userModal .form-grid,
+#userModal .modal-body > label,
+#userModal .photo-box {
+  border: 1px solid #dce5f1;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(18, 48, 85, 0.05);
+}
+
+#userModal .form-grid {
+  position: relative;
+  gap: 14px 16px;
+  padding: 74px 18px 18px;
+}
+
+#userModal .form-grid::before {
+  content: "Datos personales y acceso";
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  color: var(--navy);
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+#userModal .form-grid::after {
+  content: "Informacion de identificacion, contacto y rol dentro del sistema.";
+  position: absolute;
+  top: 38px;
+  left: 18px;
+  right: 18px;
+  color: #667085;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+#userModal .modal-body > label {
+  padding: 14px 18px;
+}
+
+#userModal .modal-body > label:nth-of-type(1)::before {
+  content: "Contraseña de acceso";
+  display: block;
+  margin-bottom: 4px;
+  color: var(--navy);
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+#userModal .modal-body > label:nth-of-type(2)::before {
+  content: "Cargo institucional";
+  display: block;
+  margin-bottom: 4px;
+  color: var(--navy);
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+#userModal label {
+  color: #14345a;
+  font-size: 0.88rem;
+}
+
+#userModal input,
+#userModal select {
+  min-height: 42px;
+  border-radius: 8px;
+}
+
+#userModal .modal-body > strong {
+  display: none;
+}
+
+#userModal .photo-box {
+  position: relative;
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  margin: 0;
+  padding: 58px 22px 22px;
+}
+
+#userModal .photo-box::before {
+  content: "Fotografia";
+  position: absolute;
+  top: 16px;
+  left: 22px;
+  color: var(--navy);
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+#userModal .photo-box::after {
+  content: "Imagen de perfil visible en el menu y listados. JPG, PNG o WEBP.";
+  position: absolute;
+  top: 38px;
+  left: 22px;
+  right: 22px;
+  color: #667085;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+#userModal .photo-box .profile-avatar {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  border: 4px solid #ffffff;
+  box-shadow: 0 10px 24px rgba(18, 48, 85, 0.15);
+}
+
+#userModal .file-upload {
+  width: 100%;
+  min-height: 64px;
+  align-content: center;
+  border: 1px solid #dce5f1;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfdff;
+}
+
+#userModal .file-upload input {
+  margin-top: 8px;
+}
+
+#userModal .form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 2px -26px 0;
+  border-top: 1px solid #dce5f1;
+  padding: 14px 26px;
+  background: rgba(248, 250, 252, 0.96);
+  backdrop-filter: blur(8px);
+}
+
+#userModal .form-actions .btn {
+  min-width: 116px;
+}
+
+html[data-theme="dark"] #userModal .user-modal,
+html[data-theme="dark"] #userModal .modal-body {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] #userModal .form-grid,
+html[data-theme="dark"] #userModal .modal-body > label,
+html[data-theme="dark"] #userModal .photo-box,
+html[data-theme="dark"] #userModal .file-upload {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: #111c31;
+}
+
+html[data-theme="dark"] #userModal .form-actions {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.96);
+}
+
+@media (max-width: 760px) {
+  #userModal {
+    padding: 0;
+  }
+
+  #userModal .user-modal {
+    width: 100%;
+    height: 100vh;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  #userModal .modal-body {
+    padding: 14px 14px 0;
+  }
+
+  #userModal .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #userModal .photo-box {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  #userModal .form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-left: -14px;
+    margin-right: -14px;
+    padding: 12px 14px;
+  }
+}

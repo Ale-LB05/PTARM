@@ -1,4 +1,10 @@
 <?php
+/*
+ * Flujo clasico de login/setup por formulario POST.
+ *
+ * La app actual usa principalmente js/auth.js + api/index.php, pero este archivo
+ * conserva compatibilidad con formularios PHP que envian accion=login o setup.
+ */
 require_once __DIR__ . '/../config/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

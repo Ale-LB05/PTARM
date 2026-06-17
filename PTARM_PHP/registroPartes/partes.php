@@ -1,4 +1,9 @@
-﻿<?php require_once __DIR__ . '/../config/db.php'; ?>
+<?php require_once __DIR__ . '/../config/db.php'; ?>
+<!--
+  Pantalla Gestionar partes.
+  js/partes.js maneja listado, formulario, ubicacion, personas, vehiculos,
+  busqueda avanzada y exportaciones. Sus datos vienen de /api/partes.
+-->
 <!doctype html>
 <html lang="es">
   <head>
@@ -30,10 +35,8 @@
     <link href="<?= app_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" />
     <link
       rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIINfQ2ATbPttBrtx3F4LkG2Z5h2e6uM4Qk="
-      crossorigin="" />
-    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260615alertfix3" />
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260616partemodal" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
@@ -168,7 +171,7 @@
     </div>
 
     <div id="parteModal" class="modal-backdrop">
-      <div class="modal">
+      <div class="modal parte-modal">
         <div class="modal-title">
           <h2 id="parteModalTitle">Nuevo parte</h2>
           <button class="modal-close" onclick="closeModal('parteModal')">
@@ -177,6 +180,13 @@
         </div>
         <form id="parteForm" class="modal-body">
           <input type="hidden" name="id_parte" />
+          <section class="parte-form-section">
+            <div class="parte-section-head">
+              <div>
+                <strong>Datos generales</strong>
+                <span>Informacion principal del parte y asignacion inicial.</span>
+              </div>
+            </div>
           <div class="form-grid cols-3">
             <label
               >Folio del parte<input
@@ -208,6 +218,7 @@
                 placeholder="Selecciona un respondiente"
             /><i class="fas fa-search"></i></div><datalist id="respondienteOptions"></datalist></label>
           </div>
+          </section>
           <fieldset class="location-fieldset">
             <legend><i class="fas fa-map-marker-alt"></i> Ubicación por kilometraje</legend>
             <div class="form-grid cols-2">
@@ -249,13 +260,16 @@
             <div class="location-map" id="locationMap" hidden></div>
           </fieldset>
           <datalist id="corralonOptions"></datalist>
+          <section class="parte-form-section vehicle-section">
           <div class="sub-row">
-            <span>Dato(s)</span
+            <span>Vehiculos involucrados</span
             ><button class="tiny-add" id="addVehicleBtn" type="button">
               Agregar nuevo vehículo +
             </button>
           </div>
           <div id="vehiclesWrap" class="vehicles-wrap"></div>
+          </section>
+          <section class="parte-form-section people-section">
           <div class="sub-row"><span>Personas involucradas</span></div>
           <fieldset class="people-fieldset">
             <div class="people-grid">
@@ -382,6 +396,14 @@
             <legend><i class="fas fa-history"></i> Historial del parte</legend>
             <div id="partHistoryRows" class="part-history-list"></div>
           </fieldset>
+          </section>
+          <section class="parte-form-section control-section">
+            <div class="parte-section-head">
+              <div>
+                <strong>Control del parte</strong>
+                <span>Estado operativo y nivel general de gravedad.</span>
+              </div>
+            </div>
           <div class="form-grid cols-3">
             <label
               >Usuario encargado<select
@@ -406,6 +428,7 @@
               </select></label
             >
           </div>
+          </section>
           <div class="form-actions">
             <button
               type="button"
@@ -523,6 +546,7 @@
             <table>
               <thead>
                 <tr>
+                  <th>No.</th>
                   <th>No. parte</th>
                   <th>Nombre</th>
                   <th>Fecha</th>
@@ -558,15 +582,13 @@
       </div>
     </div>
     <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-      crossorigin=""></script>
-    <script src="<?= app_url('js/common.js') ?>?v=20260615alertfix3"></script>
-    <script src="<?= app_url('js/partes.js') ?>?v=20260615alertfix3"></script>
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="<?= app_url('js/common.js') ?>?v=20260616historyphoto"></script>
+    <script src="<?= app_url('js/partes.js') ?>?v=20260616exceltable"></script>
     <script src="<?= app_url('vendor/jquery/jquery.min.js') ?>"></script>
     <script src="<?= app_url('vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
     <script src="<?= app_url('vendor/jquery-easing/jquery.easing.min.js') ?>"></script>
-    <script src="<?= app_url('js/sb-admin-2.min.js') ?>?v=20260615alertfix3"></script>
+    <script src="<?= app_url('js/sb-admin-2.min.js') ?>?v=20260616historyphoto"></script>
   </body>
 </html>
 

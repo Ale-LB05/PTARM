@@ -1,3 +1,10 @@
+/*
+ * Logica de autenticacion.
+ *
+ * Lo cargan index.php y registroUser/setup.php. Revisa si ya existe un
+ * administrador, manda credenciales a /api/auth/login o /api/auth/setup-admin,
+ * guarda token/usuario en localStorage y redirige a la pantalla inicial.
+ */
 const loginForm = document.getElementById("loginForm");
 const setupForm = document.getElementById("setupForm");
 const googleLoginBtn = document.getElementById("googleLoginBtn");

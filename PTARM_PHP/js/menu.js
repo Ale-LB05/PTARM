@@ -1,4 +1,10 @@
-﻿const token = localStorage.getItem("token");
+/*
+ * Script del menu/formulario anterior.
+ *
+ * Conserva compatibilidad con la interfaz previa de partes. Si una pantalla lo
+ * usa, carga partes desde la API, dibuja tabla y envia formularios al servidor.
+ */
+const token = localStorage.getItem("token");
 const nombre = localStorage.getItem("usuario");
 const rol = localStorage.getItem("rol");
 const cargo = localStorage.getItem("cargo");

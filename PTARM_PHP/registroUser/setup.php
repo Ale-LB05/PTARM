@@ -1,4 +1,8 @@
-﻿<?php require_once __DIR__ . '/../config/db.php'; ?>
+<?php require_once __DIR__ . '/../config/db.php'; ?>
+<!--
+  Pantalla de configuracion inicial.
+  Se muestra cuando aun no hay usuarios y js/auth.js crea el primer administrador.
+-->
 <!doctype html>
 <html lang="es">
   <head>
@@ -27,7 +31,7 @@
     <title>Crear administrador</title>
     <link rel="icon" type="image/png" href="<?= app_url('img/logot.png') ?>" />
     <link href="<?= app_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" />
-    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260615alertfix3" />
+    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260616historyphoto" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body class="auth-page">
@@ -45,7 +49,7 @@
         <button type="submit">Crear administrador</button>
       </form>
     </main>
-    <script src="<?= app_url('js/auth.js') ?>?v=20260615alertfix3"></script>
+    <script src="<?= app_url('js/auth.js') ?>?v=20260616historyphoto"></script>
   </body>
 </html>
 

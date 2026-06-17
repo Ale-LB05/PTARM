@@ -1,4 +1,9 @@
-﻿<?php require_once __DIR__ . '/../config/db.php'; ?>
+<?php require_once __DIR__ . '/../config/db.php'; ?>
+<!--
+  Pantalla Personal.
+  Administra usuarios y catalogos. js/personal.js llama a /api/usuarios,
+  /api/mps y rutas relacionadas dentro de api/index.php.
+-->
 <!doctype html>
 <html lang="es">
   <head>
@@ -28,7 +33,7 @@
     <title>Personal | PTARM</title>
     <link rel="icon" type="image/png" href="<?= app_url('img/logot.png') ?>" />
     <link href="<?= app_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" />
-    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260615alertfix3" />
+    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260616usermodal" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
@@ -184,7 +189,7 @@
     </div>
 
     <div id="userModal" class="modal-backdrop">
-      <div class="modal">
+      <div class="modal user-modal">
         <div class="modal-title">
           <h2 id="userModalTitle">Nuevo Empleado</h2>
           <button class="modal-close" onclick="closeModal('userModal')">
@@ -297,12 +302,12 @@
         </div>
       </div>
     </div>
-    <script src="<?= app_url('js/common.js') ?>?v=20260615alertfix3"></script>
-    <script src="<?= app_url('js/personal.js') ?>?v=20260615alertfix3"></script>
+    <script src="<?= app_url('js/common.js') ?>?v=20260616historyphoto"></script>
+    <script src="<?= app_url('js/personal.js') ?>?v=20260616defaultuserphoto"></script>
     <script src="<?= app_url('vendor/jquery/jquery.min.js') ?>"></script>
     <script src="<?= app_url('vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
     <script src="<?= app_url('vendor/jquery-easing/jquery.easing.min.js') ?>"></script>
-    <script src="<?= app_url('js/sb-admin-2.min.js') ?>?v=20260615alertfix3"></script>
+    <script src="<?= app_url('js/sb-admin-2.min.js') ?>?v=20260616historyphoto"></script>
   </body>
 </html>
 

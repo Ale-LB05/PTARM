@@ -1,4 +1,9 @@
-﻿<?php require_once __DIR__ . '/../config/db.php'; ?>
+<?php require_once __DIR__ . '/../config/db.php'; ?>
+<!--
+  Pantalla Perfil.
+  js/perfil.js carga y actualiza datos del usuario usando /api/perfil y sus
+  subrutas. common.js mantiene menu, tema y sesion.
+-->
 <!doctype html>
 <html lang="es">
   <head>
@@ -28,7 +33,7 @@
     <title>Perfil | PTARM</title>
     <link rel="icon" type="image/png" href="<?= app_url('img/logot.png') ?>" />
     <link href="<?= app_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" />
-    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260615alertfix3" />
+    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260616historyphoto" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
@@ -301,12 +306,12 @@
         </div>
       </div>
     </div>
-    <script src="<?= app_url('js/common.js') ?>?v=20260615alertfix3"></script>
-    <script src="<?= app_url('js/perfil.js') ?>?v=20260615alertfix3"></script>
+    <script src="<?= app_url('js/common.js') ?>?v=20260616historyphoto"></script>
+    <script src="<?= app_url('js/perfil.js') ?>?v=20260616historyphoto"></script>
     <script src="<?= app_url('vendor/jquery/jquery.min.js') ?>"></script>
     <script src="<?= app_url('vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
     <script src="<?= app_url('vendor/jquery-easing/jquery.easing.min.js') ?>"></script>
-    <script src="<?= app_url('js/sb-admin-2.min.js') ?>?v=20260615alertfix3"></script>
+    <script src="<?= app_url('js/sb-admin-2.min.js') ?>?v=20260616historyphoto"></script>
   </body>
 </html>
 

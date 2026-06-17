@@ -1,3 +1,9 @@
+/*
+ * Pantalla Perfil.
+ *
+ * Lo carga cruds/perfil.php. Muestra datos del usuario actual, permite cambiar
+ * correo, CURP, password y foto. Actualiza localStorage para refrescar el menu.
+ */
 setupLayout("perfil");
 
 const form = document.getElementById("profileForm");

@@ -1,5 +1,12 @@
+/*
+ * Pantalla Personal.
+ *
+ * Lo carga cruds/personal.php. Administra usuarios, ministerios publicos y
+ * catalogos relacionados. Las operaciones CRUD se envian a api/index.php.
+ */
 setupLayout("personal");
 
+// Estado en memoria de usuarios/catalogos y del registro que se esta editando.
 let users = [];
 let mps = [];
 let editingUser = null;
@@ -14,6 +21,7 @@ const mpForm = document.getElementById("mpForm");
 const search = document.getElementById("userSearch");
 const mpSearch = document.getElementById("mpSearch");
 const preview = document.getElementById("userPreview");
+const defaultUserPhoto = assetUrl("img/usuario.png");
 const userListView = document.getElementById("userListView");
 const userGridView = document.getElementById("userGridView");
 const mpListView = document.getElementById("mpListView");
@@ -74,7 +82,7 @@ function renderUsers() {
   rows.innerHTML = visible.map((u) => `
     <tr>
       <td>${String(u.id_usuario).padStart(5, "0")}</td>
-      <td><span class="person-cell"><img class="avatar-mini" src="${u.imagen_perfil || "/img/usuario.png"}" alt="" /> ${u.nombre}</span></td>
+      <td><span class="person-cell"><img class="avatar-mini" src="${u.imagen_perfil || defaultUserPhoto}" alt="" /> ${u.nombre}</span></td>
       <td>${roleLabel(u.rol)}</td>
       <td><span class="actions"><button class="icon-btn edit" onclick="openUserModal('edit', ${u.id_usuario})"><i class="fas fa-edit"></i></button><button class="icon-btn delete" onclick="deleteUser(${u.id_usuario})"><i class="fas fa-trash"></i></button><button class="icon-btn view" onclick="openUserModal('view', ${u.id_usuario})"><i class="fas fa-eye"></i></button></span></td>
     </tr>
@@ -82,7 +90,7 @@ function renderUsers() {
 
   userGridView.innerHTML = visible.map((u) => `
     <article class="user-card">
-      <img class="profile-avatar small" src="${u.imagen_perfil || "/img/usuario.png"}" alt="" />
+      <img class="profile-avatar small" src="${u.imagen_perfil || defaultUserPhoto}" alt="" />
       <div>
         <h3>${u.nombre || "Usuario"}</h3>
         <p>${roleLabel(u.rol)}</p>
@@ -162,7 +170,8 @@ function openUserModal(mode, id = null) {
   [...form.elements].forEach((el) => {
     if (el.name) el.disabled = mode === "view";
   });
-  preview.src = "/img/usuario.png";
+  // Si el usuario se crea sin fotografia, se muestra y guarda la imagen default.
+  preview.src = defaultUserPhoto;
   if (user) {
     form.nombre.value = user.nombre || "";
     form.correo.value = user.correo || "";
@@ -170,7 +179,7 @@ function openUserModal(mode, id = null) {
     form.instituto.value = user.instituto || "";
     form.cargo_grado.value = user.cargo_grado || "";
     form.id_rol.value = user.id_rol || 2;
-    preview.src = user.imagen_perfil || "/img/usuario.png";
+    preview.src = user.imagen_perfil || defaultUserPhoto;
   }
   document.getElementById("userModal").classList.add("show");
 }

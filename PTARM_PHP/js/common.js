@@ -1,4 +1,11 @@
-﻿/** Lee del navegador los datos del usuario que iniciÃ³ sesiÃ³n. */
+/*
+ * Funciones comunes para las pantallas internas.
+ *
+ * Lo llaman inicio.php, personal.php, partes.php, historial.php y perfil.php.
+ * Aqui se centraliza: rutas base, token, permisos por rol, layout comun,
+ * menu de usuario, notificaciones, tema claro/oscuro y helper api().
+ */
+/** Lee del navegador los datos del usuario que inició sesión. */
 function appBase() {
   return (window.PTARM_BASE || "").replace(/\/$/, "");
 }
@@ -38,7 +45,7 @@ function authHeaders() {
   return { Authorization: `Bearer ${token()}` };
 }
 
-/** Evita entrar a pÃ¡ginas privadas si no hay sesiÃ³n activa. */
+/** Evita entrar a páginas privadas si no hay sesión activa. */
 function requireAuth() {
   if (!token()) location.href = pageUrl("");
 }
@@ -194,7 +201,7 @@ async function loadNotifications(panel) {
     list.innerHTML = `
       <div class="notification-item">
         <span class="notification-icon"><i class="fas fa-exclamation"></i></span>
-        <div><strong>No se pudieron cargar</strong><p>Intenta de nuevo mÃ¡s tarde.</p></div>
+        <div><strong>No se pudieron cargar</strong><p>Intenta de nuevo más tarde.</p></div>
       </div>
     `;
     return;
@@ -214,14 +221,14 @@ async function loadNotifications(panel) {
     const deleted = item.accion === "ELIMINAR";
     const folio = item.folio || extractNotificationFolio(item.descripcion) || "Sin folio";
     const action = deleted ? "Eliminado" : "Modificado";
-    const verb = deleted ? "eliminÃ³" : "modificÃ³";
+    const verb = deleted ? "eliminó" : "modificó";
     const actor = item.usuario_nombre || "Usuario no disponible";
     const time = formatNotificationTime(item.fecha);
     return `
       <div class="notification-item ${deleted ? "delete" : "edit"}">
         <span class="notification-icon"><i class="${deleted ? "far fa-trash-alt" : "far fa-edit"}"></i></span>
         <div>
-          <strong>${escapeHtml(folio)} Â· ${action}</strong>
+          <strong>${escapeHtml(folio)} · ${action}</strong>
           <p>${escapeHtml(actor)} ${verb} este parte${time ? ` a las ${time}` : ""}.</p>
         </div>
       </div>
@@ -264,7 +271,7 @@ function toggleSidebar() {
   document.documentElement.classList.toggle("sidebar-start-collapsed", isCollapsed);
 }
 
-/** Cierra sesiÃ³n tras confirmaciÃ³n y limpia los datos locales. */
+/** Cierra sesión tras confirmación y limpia los datos locales. */
 function logout() {
   showConfirm("Cerrar sesi\u00f3n", "\u00bfSeguro que deseas salir?", () => {
     localStorage.clear();
@@ -372,7 +379,7 @@ function showConfirm(title, text, onConfirm) {
   no.onclick = cleanup;
 }
 
-/** Llama a la API con autenticaciÃ³n y manejo comÃºn de errores/sesiÃ³n expirada. */
+/** Llama a la API con autenticación y manejo común de errores/sesión expirada. */
 async function api(path, options = {}) {
   const isFormData = options.body instanceof FormData;
   const requestOptions = { ...options };
@@ -389,7 +396,7 @@ async function api(path, options = {}) {
       return null;
     }
     const data = await res.json();
-    if (!res.ok && !data?.error) return { success: false, error: "OcurriÃ³ un error en el servidor" };
+    if (!res.ok && !data?.error) return { success: false, error: "Ocurrió un error en el servidor" };
     return data;
   } catch {
     return { success: false, error: "No se pudo conectar con el servidor" };

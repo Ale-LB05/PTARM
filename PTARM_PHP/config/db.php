@@ -1,13 +1,27 @@
 <?php
+/*
+ * Configuracion compartida del sistema PTARM.
+ *
+ * Este archivo es incluido por las vistas PHP y por api/index.php. Centraliza:
+ * - Conexion PDO a MySQL.
+ * - Helpers de rutas para que el proyecto funcione dentro de /Pruebas/PTARM_PHP.
+ * - Sesion actual, permisos, flashes y registro de historial.
+ * - Subida segura de foto de perfil.
+ *
+ * Si una pantalla necesita base de datos, URLs absolutas del proyecto o validar
+ * sesion, debe incluir este archivo con require_once.
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Variables de entorno opcionales. Si no existen, usa los valores locales de XAMPP.
 $dbHost = getenv('DB_HOST') ?: '127.0.0.1';
 $dbName = getenv('DB_NAME') ?: 'partesdetransito_local';
 $dbUser = getenv('DB_USER') ?: 'root';
 $dbPass = getenv('DB_PASSWORD') ?: '';
 
+// Conexion unica a MySQL. PDO se comparte mediante la funcion db().
 try {
     $pdo = new PDO(
         "mysql:host={$dbHost};dbname={$dbName};charset=utf8mb4",
@@ -30,11 +44,13 @@ function db(): PDO
     return $pdo;
 }
 
+// Escapa texto antes de imprimirlo en HTML desde PHP.
 function h($value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
+// Calcula la base publica de la app sin importar desde que carpeta se abra.
 function app_base(): string
 {
     $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
@@ -55,6 +71,7 @@ function app_url(string $path = ''): string
     return ($base === '' ? '' : $base) . '/' . ltrim($path, '/');
 }
 
+// Resuelve imagenes/archivos: acepta URLs externas, rutas locales o fallback.
 function asset_path(?string $path, string $fallback = 'img/usuario.png'): string
 {
     $path = trim((string) $path);
@@ -73,6 +90,7 @@ function redirect_to(string $path): void
     exit;
 }
 
+// Guarda un mensaje temporal para mostrarlo tras una redireccion.
 function set_flash(string $type, string $message): void
 {
     $_SESSION['flash'] = ['type' => $type, 'message' => $message];
@@ -88,6 +106,7 @@ function get_flash(): ?array
     return $flash;
 }
 
+// Crea roles base si la tabla esta vacia o incompleta.
 function ensure_roles(): void
 {
     db()->exec(
@@ -107,6 +126,7 @@ function has_users(): bool
     }
 }
 
+// Devuelve el usuario de la sesion PHP tradicional usada por vistas PHP.
 function current_user(): ?array
 {
     static $user = null;
@@ -143,6 +163,7 @@ function require_login(): array
     return $user;
 }
 
+// Compara roles de forma flexible para ocultar o bloquear pantallas.
 function user_has_role($roles): bool
 {
     $user = current_user();
@@ -161,6 +182,7 @@ function require_role($roles): void
     }
 }
 
+// Guarda eventos generales para el historial/estadisticas sin bloquear la accion.
 function record_activity(string $type, ?int $userId = null, ?int $partId = null, string $detail = ''): void
 {
     try {
@@ -185,6 +207,7 @@ function record_history(string $action, ?int $partId, int $userId, string $descr
     }
 }
 
+// Valida, guarda y reemplaza imagenes de perfil subidas desde personal/perfil.
 function upload_profile_image(array $file, ?string $current = null): ?string
 {
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {

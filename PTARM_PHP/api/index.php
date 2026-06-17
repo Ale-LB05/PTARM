@@ -1,13 +1,29 @@
 <?php
+/*
+ * API JSON principal de PTARM.
+ *
+ * Las pantallas JavaScript llaman rutas como /api/partes o /api/usuarios.
+ * common.js convierte esas rutas a api/index.php?path=/api/... para que funcione
+ * en XAMPP sin configurar reglas de reescritura.
+ *
+ * Responsabilidades:
+ * - Autenticacion por token Bearer y sesion PHP.
+ * - CRUD de usuarios, catalogos y partes.
+ * - Historial, notificaciones y estadisticas.
+ * - Normalizacion de datos completos de partes para editar/exportar.
+ */
 require_once __DIR__ . '/../config/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+// La ruta real de API llega en ?path=. Si trae query interna, se separa aqui.
 $rawPath = urldecode((string) ($_GET['path'] ?? '/'));
 $path = parse_url($rawPath, PHP_URL_PATH) ?: '/';
 $apiQuery = [];
 parse_str(parse_url($rawPath, PHP_URL_QUERY) ?: '', $apiQuery);
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+// Acepta JSON para fetch() moderno y POST normal para formularios con archivos.
 $json = json_decode(file_get_contents('php://input') ?: '[]', true);
 $body = is_array($json) && $json ? $json : $_POST;
 if (!empty($body['_method'])) {
@@ -16,6 +32,7 @@ if (!empty($body['_method'])) {
 
 function out(array $payload, int $status = 200): void
 {
+    // Todas las respuestas salen por aqui para mantener formato JSON uniforme.
     http_response_code($status);
     echo json_encode($payload, JSON_UNESCAPED_UNICODE);
     exit;
@@ -40,6 +57,7 @@ function make_token(array $user): string
 
 function token_user(): ?array
 {
+    // El frontend manda Authorization: Bearer <token> desde common.js/authHeaders().
     $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
     if ($header === '' && function_exists('apache_request_headers')) {
         $headers = apache_request_headers();
@@ -73,6 +91,7 @@ function token_user(): ?array
 
 function api_user(): array
 {
+    // Todas las rutas privadas llaman aqui antes de consultar o modificar datos.
     $user = token_user();
     if (!$user) {
         fail('No autorizado', 401);
@@ -88,6 +107,7 @@ function clean($value): ?string
 
 function public_user(array $user): array
 {
+    // Esta estructura se guarda en localStorage para pintar nombre, rol y foto.
     $foto = $user['imagen_perfil'] ?: 'img/usuario.png';
     return [
         'id' => (int) $user['id_usuario'],
@@ -105,6 +125,7 @@ function public_user(array $user): array
 
 function ensure_api_schema(): void
 {
+    // Compatibilidad local: agrega columnas/tablas si la base instalada es antigua.
     $adds = [
         "ALTER TABLE usuarios ADD COLUMN curp varchar(18) DEFAULT NULL AFTER correo",
         "ALTER TABLE partes ADD COLUMN tipo_parte varchar(80) DEFAULT NULL AFTER folio",
@@ -146,6 +167,7 @@ function ensure_api_schema(): void
 
 function find_or_create(string $table, string $idColumn, ?string $name): ?int
 {
+    // Usado por partes para aceptar catalogos escritos manualmente.
     $name = clean($name);
     if (!$name) {
         return null;
@@ -163,6 +185,7 @@ function find_or_create(string $table, string $idColumn, ?string $name): ?int
 
 function save_details(int $idParte, array $data): void
 {
+    // Reemplaza detalles dependientes para que editar un parte no deje restos.
     db()->prepare('DELETE FROM personas_involucradas_detalle WHERE id_parte = ?')->execute([$idParte]);
     db()->prepare('DELETE FROM personas_involucradas WHERE id_parte = ?')->execute([$idParte]);
     db()->prepare('DELETE FROM vehiculos WHERE id_parte = ?')->execute([$idParte]);
@@ -246,6 +269,7 @@ function save_details(int $idParte, array $data): void
 
 function get_part(int $id): ?array
 {
+    // Une datos base, personas y vehiculos en el formato que consume partes.js.
     $stmt = db()->prepare(
         "SELECT p.*, mp.nombre AS mp_nombre, r.nombre AS respondiente_nombre,
                 u.nombre AS encargado_nombre, u.imagen_perfil AS encargado_foto,
@@ -278,6 +302,7 @@ ensure_roles();
 ensure_api_schema();
 
 try {
+    // Rutas publicas de autenticacion. auth.js las usa antes de entrar al sistema.
     if ($path === '/api/auth/status') {
         out(['success' => true, 'hasUsers' => has_users()]);
     }
@@ -331,10 +356,12 @@ try {
         fail('Google OAuth no está configurado en la versión PHP.', 503);
     }
 
+    // A partir de aqui todas las rutas requieren token Bearer valido.
     $user = api_user();
     $isAdmin = strtolower((string) $user['rol']) === 'administrador';
     $canWritePartes = in_array(strtolower((string) $user['rol']), ['administrador', 'capturista'], true);
 
+    // Usuarios: pantalla Personal. Solo administradores pueden crear/editar/eliminar.
     if ($path === '/api/usuarios') {
         if (!$isAdmin) {
             fail('No tienes permiso', 403);
@@ -398,6 +425,7 @@ try {
         }
     }
 
+    // Ministerios publicos: catalogo usado por Personal y Gestionar partes.
     if ($path === '/api/mps') {
         if ($method === 'GET') {
             out(['success' => true, 'data' => db()->query('SELECT * FROM ministerios_publicos WHERE activo = 1 ORDER BY nombre')->fetchAll()]);
@@ -427,6 +455,7 @@ try {
         }
     }
 
+    // Perfil: perfil.js consulta y actualiza datos del usuario autenticado.
     if ($path === '/api/perfil' && $method === 'GET') {
         $stmt = db()->prepare(
             "SELECT p.folio, p.fecha, p.gravedad_general, p.estado, mp.nombre AS mp_nombre, r.nombre AS respondiente_nombre
@@ -464,6 +493,7 @@ try {
         out(['success' => true, 'message' => 'Contraseña actualizada']);
     }
 
+    // Catalogos de partes: opciones para MP, respondiente y corralon en partes.js.
     if ($path === '/api/partes/catalogos') {
         out(['success' => true, 'data' => [
             'mps' => db()->query('SELECT id_mp, nombre FROM ministerios_publicos WHERE activo = 1 ORDER BY nombre')->fetchAll(),
@@ -472,6 +502,7 @@ try {
         ]]);
     }
 
+    // Partes: listado, busqueda, creacion y datos resumidos para Gestionar partes.
     if ($path === '/api/partes') {
         if ($method === 'GET') {
             $q = trim((string) ($apiQuery['q'] ?? $_GET['q'] ?? ''));
@@ -525,6 +556,7 @@ try {
         }
     }
 
+    // Exportacion: partes.js registra que se preparo PDF o Excel.
     if ($path === '/api/partes/export' && $method === 'POST') {
         $exportDetail = 'Exportación ' . strtoupper((string) ($body['tipo'] ?? 'archivo')) . ' de ' . (int) ($body['total'] ?? 0) . ' parte(s)';
         record_history('EXPORTAR', null, (int) $user['id_usuario'], $exportDetail);
@@ -532,6 +564,7 @@ try {
         out(['success' => true, 'message' => 'Exportación registrada']);
     }
 
+    // Historial por parte: se muestra al abrir un parte en modo consulta.
     if (preg_match('#^/api/partes/(\d+)/historial$#', $path, $m)) {
         $stmt = db()->prepare(
             "SELECT h.id_historial, h.accion, h.descripcion, h.fecha, u.nombre AS usuario_nombre, u.imagen_perfil AS usuario_foto
@@ -548,6 +581,7 @@ try {
         out(['success' => true, 'data' => $rows]);
     }
 
+    // Detalle de parte: partes.js lo usa para editar, ver y exportar datos completos.
     if (preg_match('#^/api/partes/(\d+)$#', $path, $m)) {
         $id = (int) $m[1];
         if ($method === 'GET') {
@@ -585,6 +619,7 @@ try {
     }
 
     if (strpos($path, '/api/historial') === 0) {
+        // Notificaciones: common.js las pinta en el menu superior.
         if ($path === '/api/historial/notificaciones') {
             $rows = db()->query(
                 "SELECT h.accion, h.descripcion, h.fecha, p.folio, u.nombre AS usuario_nombre
@@ -598,6 +633,7 @@ try {
             out(['success' => true, 'data' => $rows]);
         }
 
+        // Estadisticas: historial.js las usa para graficas y exportaciones.
         if ($path === '/api/historial/estadisticas/detalle') {
             $type = (string) ($apiQuery['tipo'] ?? '');
             $month = (int) ($apiQuery['mes'] ?? date('n'));
@@ -668,7 +704,7 @@ try {
 
         $stmt = db()->query(
             "SELECT h.*, p.folio, p.fecha AS parte_fecha, mp.nombre AS mp_nombre, u.nombre AS usuario_nombre,
-                    enc.nombre AS encargado_nombre, enc.imagen_perfil AS encargado_foto
+                    u.imagen_perfil AS usuario_foto, enc.nombre AS encargado_nombre, enc.imagen_perfil AS encargado_foto
              FROM historial_cambios h
              LEFT JOIN partes p ON p.id_parte = h.id_parte
              LEFT JOIN ministerios_publicos mp ON mp.id_mp = p.id_mp
@@ -679,6 +715,7 @@ try {
         );
         $rows = $stmt->fetchAll();
         foreach ($rows as &$row) {
+            $row['usuario_foto'] = asset_path($row['usuario_foto'] ?? null);
             $row['encargado_foto'] = asset_path($row['encargado_foto'] ?? null);
         }
         out(['success' => true, 'data' => $rows]);

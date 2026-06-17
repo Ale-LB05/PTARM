@@ -3,7 +3,7 @@ function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     sidebar.classList.toggle('contraida');
     document.querySelector('.app-shell').classList.toggle('sidebar-collapsed');
-    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('contraida')  '1' : '0');
+    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('contraida') ? '1' : '0');
 }
 
 function closeConfirm() {

@@ -1,5 +1,5 @@
 <php
-$pageTitle = $pageTitle  'PTARM';
+$pageTitle = $pageTitle ? $pageTitle : 'PTARM';
 >
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +12,7 @@ $pageTitle = $pageTitle  'PTARM';
     (() => {
         const root = document.documentElement;
         const dark = localStorage.getItem('theme') === 'dark';
-        root.dataset.theme = dark  'dark' : 'light';
+        root.dataset.theme = dark ? 'dark' : 'light';
         root.classList.toggle('theme-dark', dark);
         root.classList.toggle('sidebar-start-collapsed', localStorage.getItem('sidebarCollapsed') === '1');
     })();
