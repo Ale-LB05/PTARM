@@ -154,7 +154,7 @@
               <thead>
                 <tr>
                   <th>No. parte</th>
-                  <th>Nombre / motivo</th>
+                  <th>Respondiente</th>
                   <th>Fecha</th>
                   <th>Estado</th>
                   <th>MP</th>

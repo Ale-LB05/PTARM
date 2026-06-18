@@ -832,6 +832,15 @@ function openExport() {
   document.getElementById("exportModal").classList.add("show");
 }
 
+/** Abre el modal visual de importacion. La lectura de archivos se implementara despues. */
+function openImport() {
+  if (!canWritePartes) {
+    showToast("No tienes permiso para importar partes", "error");
+    return;
+  }
+  document.getElementById("importModal").classList.add("show");
+}
+
 /** Pinta las filas seleccionables dentro del modal de exportacion. */
 function renderExportRows() {
   const q = exportSearch.value.trim().toLowerCase();
@@ -908,7 +917,7 @@ async function loadDetailedParts(rows) {
 function downloadExport(type, rows) {
   const stamp = new Date().toISOString().slice(0, 10);
   if (type === "excel") {
-    const workbook = excelHtml(rows);
+    const workbook = singleTableExcelHtml(rows);
     downloadBlob(workbook, `partes-${stamp}.xls`, "application/vnd.ms-excel;charset=utf-8");
     return;
   }
@@ -1173,10 +1182,172 @@ function excelHtml(rows) {
   `;
 }
 
+/** Construye el Excel de partes en tablas separadas por seccion. */
+function horizontalExcelHtml(rows) {
+  const generatedAt = new Date().toLocaleString("es-MX");
+  const vehicleRows = rows.flatMap((parte) => (parte.vehiculos || []).map((vehicle, index) => ({ parte, vehicle, index })));
+  const peopleRows = rows.flatMap((parte) => (parte.personas_detalle || []).map((person, index) => ({ parte, person, index })));
+
+  return `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body{font-family:Arial,sans-serif;color:#172033;margin:24px;background:#fff}
+          .report-title{background:#06145f;color:#fff;padding:16px 18px;border:1px solid #06145f}
+          .report-title h1{margin:0;font-size:22px;letter-spacing:.03em;text-transform:uppercase}
+          .report-title p{margin:6px 0 0;color:#e0e7ff}
+          .sheet-note{margin:14px 0 20px;color:#475569;font-size:12px}
+          h2{margin:26px 0 8px;color:#06145f;font-size:16px;text-transform:uppercase}
+          table{border-collapse:collapse;width:100%;margin-bottom:22px}
+          th,td{border:1px solid #b9c0d4;padding:8px;text-align:left;vertical-align:top;white-space:normal}
+          th{color:#fff;font-weight:700;text-transform:uppercase}
+          .head-general th{background:#06145f}
+          .head-location th{background:#0f766e}
+          .head-people th{background:#7c2d12}
+          .head-vehicles th{background:#854d0e}
+          .head-system th{background:#334155}
+          .empty-field{color:#64748b;font-style:italic}
+        </style>
+      </head>
+      <body>
+        <div class="report-title">
+          <h1>Partes de transito</h1>
+          <p>Total de partes: ${rows.length} | Generado: ${escapeHtml(generatedAt)}</p>
+        </div>
+        
+
+        <h2>Datos generales</h2>
+        <table>
+          <thead class="head-general">
+            <tr>
+              <th>ID parte</th><th>Folio</th><th>Motivo</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Gravedad general</th>
+              <th>Respondiente</th><th>MP asignado</th><th>Usuario encargado</th><th>Fecha de creacion</th>
+            </tr>
+          </thead>
+          <tbody>${rows.map((parte) => `
+            <tr>
+              <td>${fieldHtml(parte.id_parte)}</td><td>${fieldHtml(parte.folio)}</td><td>${fieldHtml(parte.tipo_parte)}</td>
+              <td>${fieldHtml(formatDate(parte.fecha))}</td><td>${fieldHtml(parte.hora)}</td><td>${fieldHtml(parte.estado)}</td><td>${fieldHtml(parte.gravedad_general)}</td>
+              <td>${fieldHtml(parte.respondiente_nombre)}</td><td>${fieldHtml(parte.mp_nombre)}</td><td>${fieldHtml(parte.encargado_nombre)}</td><td>${fieldHtml(formatDateTime(parte.fecha_creacion))}</td>
+            </tr>
+          `).join("")}</tbody>
+        </table>
+
+        <h2>Ubicacion</h2>
+        <table>
+          <thead class="head-location">
+            <tr><th>ID parte</th><th>Folio</th><th>Kilometro o referencia</th><th>Direccion</th><th>Latitud</th><th>Longitud</th><th>Google place id</th></tr>
+          </thead>
+          <tbody>${rows.map((parte) => `
+            <tr>
+              <td>${fieldHtml(parte.id_parte)}</td><td>${fieldHtml(parte.folio)}</td><td>${fieldHtml(parte.ubicacion_kilometro)}</td>
+              <td>${fieldHtml(parte.ubicacion_direccion)}</td><td>${fieldHtml(parte.ubicacion_lat)}</td><td>${fieldHtml(parte.ubicacion_lng)}</td><td>${fieldHtml(parte.google_place_id)}</td>
+            </tr>
+          `).join("")}</tbody>
+        </table>
+
+        <h2>Personas involucradas</h2>
+        <table>
+          <thead class="head-people">
+            <tr>
+              <th>ID parte</th><th>Folio</th><th># persona</th><th>Nombre</th><th>Vehiculo</th><th>Participacion</th>
+              <th>Total personas</th><th>Fallecidas</th><th>Numero fallecidos</th><th>Heridas</th><th>Numero heridos</th><th>Otros</th><th>Gravedad</th><th>Observacion fallecidos</th><th>Observaciones</th>
+            </tr>
+          </thead>
+          <tbody>${peopleRows.length ? peopleRows.map(({ parte, person, index }) => `
+            <tr>
+              <td>${fieldHtml(parte.id_parte)}</td><td>${fieldHtml(parte.folio)}</td><td>${fieldHtml(person.numero_persona || index + 1)}</td>
+              <td>${fieldHtml(person.nombre)}</td><td>${fieldHtml(person.vehiculo_label)}</td><td>${fieldHtml(person.tipo_participacion)}</td>
+              <td>${fieldHtml(parte.numero_personas)}</td><td>${fieldHtml(boolText(parte.personas_fallecidas))}</td><td>${fieldHtml(parte.numero_fallecidos)}</td>
+              <td>${fieldHtml(boolText(parte.personas_heridas))}</td><td>${fieldHtml(parte.numero_heridos)}</td><td>${fieldHtml(boolText(parte.otros))}</td>
+              <td>${fieldHtml(parte.gravedad)}</td><td>${fieldHtml(parte.observacion_fallecidos)}</td><td>${fieldHtml(parte.observaciones)}</td>
+            </tr>
+          `).join("") : `<tr><td colspan="15">${fieldHtml("")}</td></tr>`}</tbody>
+        </table>
+
+        <h2>Vehiculos</h2>
+        <table>
+          <thead class="head-vehicles">
+            <tr><th>ID parte</th><th>Folio</th><th># vehiculo</th><th>Clase</th><th>Marca</th><th>Modelo</th><th>Tipo</th><th>No. serie</th><th>No. placa</th><th>Corralon</th><th>Estatus</th><th>Danos</th></tr>
+          </thead>
+          <tbody>${vehicleRows.length ? vehicleRows.map(({ parte, vehicle, index }) => `
+            <tr>
+              <td>${fieldHtml(parte.id_parte)}</td><td>${fieldHtml(parte.folio)}</td><td>${fieldHtml(vehicle.numero_vehiculo || index + 1)}</td>
+              <td>${fieldHtml(vehicle.tipo_vehiculo)}</td><td>${fieldHtml(vehicle.marca)}</td><td>${fieldHtml(vehicle.modelo)}</td><td>${fieldHtml(vehicle.tipo)}</td>
+              <td>${fieldHtml(vehicle.numero_serie)}</td><td>${fieldHtml(vehicle.numero_placa)}</td><td>${fieldHtml(vehicle.corralon)}</td><td>${fieldHtml(vehicle.estatus_vehiculo)}</td><td>${fieldHtml(vehicle.danos_vehiculo)}</td>
+            </tr>
+          `).join("") : `<tr><td colspan="12">${fieldHtml("")}</td></tr>`}</tbody>
+        </table>
+
+        <h2>Control del sistema</h2>
+        <table>
+          <thead class="head-system">
+            <tr><th>ID parte</th><th>Folio</th><th>ID MP</th><th>ID respondiente</th><th>ID creador</th><th>ID encargado</th></tr>
+          </thead>
+          <tbody>${rows.map((parte) => `
+            <tr><td>${fieldHtml(parte.id_parte)}</td><td>${fieldHtml(parte.folio)}</td><td>${fieldHtml(parte.id_mp)}</td><td>${fieldHtml(parte.id_respondiente)}</td><td>${fieldHtml(parte.creado_por)}</td><td>${fieldHtml(parte.asignado_a)}</td></tr>
+          `).join("")}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
+}
+
+/** Construye el Excel como una sola lista con todos los datos por parte. */
+function singleTableExcelHtml(rows) {
+  const titleStyle = "background:#ffffff;color:#06145f;font-size:16px;font-weight:800;text-align:left;border:1px solid #b9c0d4;padding:8px";
+  const general = excelHeaderStyle("#06145f");
+  const location = excelHeaderStyle("#0f766e");
+  const people = excelHeaderStyle("#7c2d12");
+  const vehicles = excelHeaderStyle("#854d0e");
+
+  return `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body{font-family:Arial,sans-serif;color:#172033;margin:0;background:#fff}
+          table{border-collapse:collapse;width:100%}
+          th,td{border:1px solid #b9c0d4;padding:8px;text-align:left;vertical-align:top;white-space:normal}
+          .empty-field{color:#64748b;font-style:italic}
+        </style>
+      </head>
+      <body>
+        <table>
+          <thead>
+            <tr><th colspan="23" style="${titleStyle}">Partes de transito</th></tr>
+            <tr>
+              <th style="${general}">ID parte</th><th style="${general}">Folio</th><th style="${general}">Motivo</th><th style="${general}">Fecha</th><th style="${general}">Hora</th><th style="${general}">Estado</th><th style="${general}">Gravedad general</th><th style="${general}">Respondiente</th><th style="${general}">MP asignado</th><th style="${general}">Usuario encargado</th><th style="${general}">Fecha de creacion</th>
+              <th style="${location}">Kilometro o referencia</th><th style="${location}">Direccion</th>
+              <th style="${people}">Total personas</th><th style="${people}">Detalle personas</th><th style="${people}">Fallecidas</th><th style="${people}">Numero fallecidos</th><th style="${people}">Heridas</th><th style="${people}">Numero heridos</th><th style="${people}">Otros</th><th style="${people}">Gravedad personas</th><th style="${people}">Observacion fallecidos</th><th style="${people}">Observaciones</th>
+              <th style="${vehicles}">Vehiculos</th>
+            </tr>
+          </thead>
+          <tbody>${rows.map((parte) => `
+            <tr>
+              <td>${fieldHtml(parte.id_parte)}</td><td>${fieldHtml(parte.folio)}</td><td>${fieldHtml(parte.tipo_parte)}</td><td>${fieldHtml(formatDate(parte.fecha))}</td><td>${fieldHtml(parte.hora)}</td><td>${fieldHtml(parte.estado)}</td><td>${fieldHtml(parte.gravedad_general)}</td><td>${fieldHtml(parte.respondiente_nombre)}</td><td>${fieldHtml(parte.mp_nombre)}</td><td>${fieldHtml(parte.encargado_nombre)}</td><td>${fieldHtml(formatDateTime(parte.fecha_creacion))}</td>
+              <td>${fieldHtml(parte.ubicacion_kilometro)}</td><td>${fieldHtml(parte.ubicacion_direccion)}</td>
+              <td>${fieldHtml(parte.numero_personas)}</td><td>${fieldHtml(peopleSummary(parte.personas_detalle))}</td><td>${fieldHtml(boolText(parte.personas_fallecidas))}</td><td>${fieldHtml(parte.numero_fallecidos)}</td><td>${fieldHtml(boolText(parte.personas_heridas))}</td><td>${fieldHtml(parte.numero_heridos)}</td><td>${fieldHtml(boolText(parte.otros))}</td><td>${fieldHtml(parte.gravedad)}</td><td>${fieldHtml(parte.observacion_fallecidos)}</td><td>${fieldHtml(parte.observaciones)}</td>
+              <td>${fieldHtml(vehicleSummary(parte.vehiculos))}</td>
+            </tr>
+          `).join("")}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
+}
+
+/** Estilo inline para que Excel conserve legibilidad en encabezados coloreados. */
+function excelHeaderStyle(background) {
+  return `background:${background};color:#ffffff;font-weight:700;text-align:center;vertical-align:middle;border:1px solid #ffffff;padding:8px;white-space:normal;mso-wrap-style:tight`;
+}
+
 /** Oculta botones de crear/exportar segun permisos del rol actual. */
 function applyPartPermissions() {
   document.getElementById("createParteBtn").hidden = !canWritePartes;
   document.getElementById("openExportBtn").hidden = !canExportPartes;
+  document.getElementById("openImportBtn").hidden = !canWritePartes;
 }
 
 /** Descarga texto o HTML como archivo usando un Blob temporal. */
@@ -1620,6 +1791,7 @@ loadPartes();
 window.openParteModal = openParteModal;
 window.deleteParte = deleteParte;
 window.openExport = openExport;
+window.openImport = openImport;
 window.exportPartes = exportPartes;
 window.closeModal = closeModal;
 window.removeAdvancedFilter = removeAdvancedFilter;

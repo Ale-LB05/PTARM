@@ -628,7 +628,7 @@ function aggregateStatsMonths(months) {
 async function exportStatsExcel() {
   const exportData = await buildStatsExportData();
   if (!exportData) return;
-  downloadStatsBlob(statsReportHtml(exportData, "excel"), statsExportFilename(exportData, "xls"), "application/vnd.ms-excel;charset=utf-8");
+  downloadStatsBlob(statsSingleTableExcelHtml(exportData), statsExportFilename(exportData, "xls"), "application/vnd.ms-excel;charset=utf-8");
   closeModal("statsExportModal");
 }
 
@@ -647,6 +647,144 @@ async function exportStatsPdf() {
   reportWindow.focus();
   closeModal("statsExportModal");
   setTimeout(() => reportWindow.print(), 300);
+}
+
+function statsExcelReportHtml(exportData) {
+  const { summary, details, months } = exportData;
+  const title = `Estadisticas - ${statsExportPeriodLabel(exportData)}`;
+  const generatedAt = new Date().toLocaleString("es-MX");
+  const monthRows = months.flatMap((monthData) =>
+    (monthData.eventos || []).map((event) => ({
+      month: statsMonthName(monthData.mes),
+      year: monthData.anio,
+      event,
+    })),
+  );
+  const detailRows = details.flatMap((detail) =>
+    detail.registros.map((row) => ({ detail, row })),
+  );
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body{font-family:Arial,sans-serif;color:#172033;margin:24px;background:#fff}
+    .report-title{background:#0b2d55;color:#fff;padding:16px 18px;border:1px solid #0b2d55}
+    .report-title h1{margin:0;font-size:22px;letter-spacing:.03em;text-transform:uppercase}
+    .report-title p{margin:6px 0 0;color:#dbeafe}
+    .sheet-note{margin:14px 0 20px;color:#475569;font-size:12px}
+    h2{margin:26px 0 8px;color:#0b2d55;font-size:16px;text-transform:uppercase}
+    table{border-collapse:collapse;width:100%;margin-bottom:22px}
+    th,td{border:1px solid #cbd5e1;padding:8px;text-align:left;vertical-align:top;white-space:normal}
+    th{color:#fff;font-weight:700;text-transform:uppercase}
+    .head-summary th{background:#0b2d55}
+    .head-month th{background:#0f766e}
+    .head-users th{background:#7c2d12}
+    .head-detail th{background:#854d0e}
+    .empty-field{color:#64748b;font-style:italic}
+  </style>
+</head>
+<body>
+  <div class="report-title">
+    <h1>${escapeHtml(title)}</h1>
+    <p>Total del periodo: ${summary.total || 0} | Generado: ${escapeHtml(generatedAt)}</p>
+  </div>
+  
+
+  <h2>Resumen general</h2>
+  <table>
+    <thead class="head-summary"><tr><th>Actividad</th><th>Total</th><th>Porcentaje</th></tr></thead>
+    <tbody>${summary.eventos?.length ? summary.eventos.map((event) => `
+      <tr><td>${escapeHtml(event.etiqueta)}</td><td>${event.total}</td><td>${event.porcentaje}%</td></tr>
+    `).join("") : `<tr><td colspan="3">Sin datos.</td></tr>`}</tbody>
+  </table>
+
+  <h2>Actividad por mes</h2>
+  <table>
+    <thead class="head-month"><tr><th>Mes</th><th>Anio</th><th>Actividad</th><th>Total</th><th>Porcentaje mensual</th></tr></thead>
+    <tbody>${monthRows.length ? monthRows.map(({ month, year, event }) => `
+      <tr><td>${escapeHtml(month)}</td><td>${year}</td><td>${escapeHtml(event.etiqueta)}</td><td>${event.total}</td><td>${event.porcentaje}%</td></tr>
+    `).join("") : `<tr><td colspan="5">Sin datos.</td></tr>`}</tbody>
+  </table>
+
+  <h2>Usuarios con mas actividad</h2>
+  <table>
+    <thead class="head-users"><tr><th>Usuario</th><th>Total</th></tr></thead>
+    <tbody>${summary.usuarios?.length ? summary.usuarios.map((user) => `
+      <tr><td>${escapeHtml(user.nombre)}</td><td>${user.total}</td></tr>
+    `).join("") : `<tr><td colspan="2">Sin usuarios registrados.</td></tr>`}</tbody>
+  </table>
+
+  <h2>Registros detallados</h2>
+  <table>
+    <thead class="head-detail">
+      <tr><th>Estadistica</th><th>Fecha</th><th>Usuario</th><th>Correo</th><th>Folio</th><th>Fecha parte</th><th>Detalle</th></tr>
+    </thead>
+    <tbody>${detailRows.length ? detailRows.map(({ detail, row }) => `
+      <tr>
+        <td>${escapeHtml(detail.etiqueta)}</td><td>${escapeHtml(formatStatsDateTime(row.fecha))}</td><td>${escapeHtml(row.usuario)}</td>
+        <td>${escapeHtml(row.correo || "")}</td><td>${escapeHtml(row.folio || "No aplica")}</td><td>${escapeHtml(formatStatsDateTime(row.parte_fecha))}</td><td>${escapeHtml(row.detalle || "Sin detalle")}</td>
+      </tr>
+    `).join("") : `<tr><td colspan="7">Sin registros.</td></tr>`}</tbody>
+  </table>
+</body>
+</html>`;
+}
+
+function statsSingleTableExcelHtml(exportData) {
+  const { summary, details } = exportData;
+  const title = `Estadisticas - ${statsExportPeriodLabel(exportData)}`;
+  const titleStyle = "background:#ffffff;color:#0b2d55;font-size:16px;font-weight:800;text-align:left;border:1px solid #cbd5e1;padding:8px";
+  const summaryHeader = excelHeaderStyle("#0b2d55");
+  const usersHeader = excelHeaderStyle("#7c2d12");
+  const detailHeader = excelHeaderStyle("#854d0e");
+  const detailRows = details.flatMap((detail) =>
+    detail.registros.length
+      ? detail.registros.map((row) => ({ detail, row }))
+      : [{ detail, row: null }],
+  );
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body{font-family:Arial,sans-serif;color:#172033;margin:0;background:#fff}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #cbd5e1;padding:8px;text-align:left;vertical-align:top;white-space:normal}
+  </style>
+</head>
+<body>
+  <table>
+    <thead>
+      <tr><th colspan="11" style="${titleStyle}">${escapeHtml(title)}</th></tr>
+      <tr>
+        <th style="${summaryHeader}">Estadistica</th><th style="${summaryHeader}">Total estadistica</th><th style="${summaryHeader}">Porcentaje del periodo</th><th style="${summaryHeader}">Total del periodo</th>
+        <th style="${usersHeader}">Usuarios relacionados</th><th style="${usersHeader}">Usuario</th><th style="${usersHeader}">Correo</th>
+        <th style="${detailHeader}">Fecha</th><th style="${detailHeader}">Folio</th><th style="${detailHeader}">Fecha parte</th><th style="${detailHeader}">Detalle</th>
+      </tr>
+    </thead>
+    <tbody>${detailRows.length ? detailRows.map(({ detail, row }) => {
+      const summaryEvent = summary.eventos?.find((event) => event.tipo === detail.tipo);
+      return `
+        <tr>
+          <td>${escapeHtml(detail.etiqueta)}</td><td>${detail.total}</td><td>${summaryEvent?.porcentaje || 0}%</td><td>${summary.total || 0}</td>
+          <td>${detail.usuarios.map((user) => `${escapeHtml(user.nombre)}: ${user.total}`).join(" | ") || "Sin usuarios registrados"}</td>
+          <td>${escapeHtml(row?.usuario || "")}</td><td>${escapeHtml(row?.correo || "")}</td>
+          <td>${escapeHtml(row ? formatStatsDateTime(row.fecha) : "")}</td><td>${escapeHtml(row?.folio || "No aplica")}</td><td>${escapeHtml(row?.parte_fecha ? formatStatsDateTime(row.parte_fecha) : "")}</td><td>${escapeHtml(row?.detalle || "Sin detalle")}</td>
+        </tr>
+      `;
+    }).join("") : `<tr><td colspan="11">Sin datos.</td></tr>`}</tbody>
+  </table>
+</body>
+</html>`;
+}
+
+function excelHeaderStyle(background) {
+  return `background:${background};color:#ffffff;font-weight:700;text-align:center;vertical-align:middle;border:1px solid #ffffff;padding:8px;white-space:normal;mso-wrap-style:tight`;
 }
 
 function statsReportHtml(exportData, mode) {
