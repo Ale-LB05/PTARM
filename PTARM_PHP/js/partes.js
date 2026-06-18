@@ -28,6 +28,7 @@ const partesRows = document.getElementById("partesRows");
 const partesListView = document.getElementById("partesListView");
 const partesGridView = document.getElementById("partesGridView");
 const exportRows = document.getElementById("exportRows");
+const importRows = document.getElementById("importRows");
 const parteForm = document.getElementById("parteForm");
 const partSearch = document.getElementById("partSearch");
 const advancedSearchBtn = document.getElementById("advancedSearchBtn");
@@ -42,6 +43,13 @@ const clearAdvancedSearchBtn = document.getElementById("clearAdvancedSearchBtn")
 const exportSearch = document.getElementById("exportSearch");
 const exportSelectAll = document.getElementById("exportSelectAll");
 const exportCount = document.getElementById("exportCount");
+const importCount = document.getElementById("importCount");
+const importFileInput = document.getElementById("importFileInput");
+const importFileTitle = document.getElementById("importFileTitle");
+const importFileHint = document.getElementById("importFileHint");
+const importStatus = document.getElementById("importStatus");
+const downloadImportTemplateBtn = document.getElementById("downloadImportTemplateBtn");
+const createImportedPartesBtn = document.getElementById("createImportedPartesBtn");
 const vehiclesWrap = document.getElementById("vehiclesWrap");
 const peopleAssignmentPanel = document.getElementById("peopleAssignmentPanel");
 const peopleAssignmentRows = document.getElementById("peopleAssignmentRows");
@@ -83,6 +91,44 @@ let partCatalogs = { mps: [], respondientes: [], corralones: [] };
 let locationMapInstance = null;
 let locationMapMarker = null;
 let locationZoomControl = null;
+let importRowsData = [];
+let importSkippedRows = [];
+let importType = "excel";
+let usersCache = [];
+
+const excelPartesColumns = [
+  { key: "id_parte", label: "ID parte", group: "general" },
+  { key: "folio", label: "Folio", group: "general" },
+  { key: "tipo_parte", label: "Motivo", group: "general" },
+  { key: "fecha", label: "Fecha", group: "general", value: (parte) => formatDate(parte.fecha) },
+  { key: "hora", label: "Hora", group: "general" },
+  { key: "estado", label: "Estado", group: "general" },
+  { key: "gravedad_general", label: "Gravedad general", group: "general" },
+  { key: "respondiente_nombre", label: "Respondiente", group: "general" },
+  { key: "mp_nombre", label: "MP asignado", group: "general" },
+  { key: "encargado_nombre", label: "Usuario encargado", group: "general" },
+  { key: "fecha_creacion", label: "Fecha de creación", group: "general", value: (parte) => formatDateTime(parte.fecha_creacion) },
+  { key: "ubicacion_kilometro", label: "Kilómetro o referencia", group: "location" },
+  { key: "ubicacion_direccion", label: "Dirección", group: "location" },
+  { key: "numero_personas", label: "Total personas", group: "people" },
+  { key: "personas_detalle", label: "Detalle personas", group: "people", value: (parte) => peopleSummary(parte.personas_detalle) },
+  { key: "personas_fallecidas", label: "Fallecidas", group: "people", value: (parte) => boolText(parte.personas_fallecidas) },
+  { key: "numero_fallecidos", label: "Número fallecidos", group: "people" },
+  { key: "personas_heridas", label: "Heridas", group: "people", value: (parte) => boolText(parte.personas_heridas) },
+  { key: "numero_heridos", label: "Número heridos", group: "people" },
+  { key: "otros", label: "Otros", group: "people", value: (parte) => boolText(parte.otros) },
+  { key: "gravedad", label: "Gravedad personas", group: "people" },
+  { key: "observacion_fallecidos", label: "Observación fallecidos", group: "people" },
+  { key: "observaciones", label: "Observaciones", group: "people" },
+  { key: "vehiculos", label: "Vehículos", group: "vehicles", value: (parte) => vehicleSummary(parte.vehiculos) },
+];
+
+const excelHeaderColors = {
+  general: "#06145f",
+  location: "#0f766e",
+  people: "#7c2d12",
+  vehicles: "#854d0e",
+};
 
 /** Cierra cualquier modal por su id. */
 function closeModal(id) {
@@ -143,6 +189,20 @@ function syncAdvancedSearchInput() {
   advancedSearchValue.toggleAttribute("list", !["fecha", "hora"].includes(field));
   if (!["fecha", "hora"].includes(field)) advancedSearchValue.setAttribute("list", "advancedSearchOptions");
   renderAdvancedSearchOptions(field);
+}
+
+/** Devuelve el nombre principal que se muestra para identificar un parte. */
+function parteDisplayName(parte) {
+  return parte.respondiente_nombre || parte.tipo_parte || "Parte de tránsito";
+}
+
+/** Construye la celda visual del parte para que folio y nombre sean faciles de leer. */
+function renderParteNameCell(parte) {
+  return `
+    <div class="parte-name-cell">
+      <strong>${escapeHtml(parteDisplayName(parte))}</strong>
+    </div>
+  `;
 }
 
 /** Muestra sugerencias del apartado seleccionado sin bloquear escritura manual. */
@@ -381,6 +441,7 @@ async function loadUsersSelect() {
   const select = document.getElementById("asignadoSelect");
   select.innerHTML = `<option value="">Sin asignar</option>`;
   if (data?.success && Array.isArray(data.data)) {
+    usersCache = data.data;
     data.data.forEach((u) => {
       select.innerHTML += `<option value="${u.id_usuario}">${u.nombre}</option>`;
     });
@@ -401,12 +462,12 @@ function renderPartes() {
 
   partesRows.innerHTML = visible.map((parte) => `
     <tr>
-      <td>${parte.folio || ""}</td>
-      <td>${parte.respondiente_nombre || parte.tipo_parte || "Parte de tránsito"}</td>
+      <td>${escapeHtml(parte.folio || "")}</td>
+      <td>${renderParteNameCell(parte)}</td>
       <td>${formatDate(parte.fecha)}</td>
       <td>${renderStatus(parte.estado)}</td>
-      <td>${parte.mp_nombre || "Sin MP"}</td>
-      <td><span class="person-cell"><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${parte.encargado_nombre || "Sin asignar"}</span></td>
+      <td>${escapeHtml(parte.mp_nombre || "Sin MP")}</td>
+      <td><span class="person-cell"><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${escapeHtml(parte.encargado_nombre || "Sin asignar")}</span></td>
       <td>${renderParteActions(parte)}</td>
     </tr>
   `).join("") || `<tr><td colspan="7">Aún no hay partes registrados.</td></tr>`;
@@ -414,12 +475,12 @@ function renderPartes() {
   partesGridView.innerHTML = visible.map((parte) => `
     <article class="parte-card">
       <div>
-        <span class="parte-folio">${parte.folio || "Sin folio"}</span>
-        <h3>${parte.respondiente_nombre || parte.tipo_parte || "Parte de tránsito"}</h3>
+        <span class="parte-folio">${escapeHtml(parte.folio || "Sin folio")}</span>
+        <h3>${escapeHtml(parteDisplayName(parte))}</h3>
       </div>
       <p><i class="far fa-calendar"></i> ${formatDate(parte.fecha) || "Sin fecha"}</p>
-      <p><i class="fas fa-user-shield"></i> ${parte.mp_nombre || "Sin MP"}</p>
-      <p><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${parte.encargado_nombre || "Sin asignar"}</p>
+      <p><i class="fas fa-user-shield"></i> ${escapeHtml(parte.mp_nombre || "Sin MP")}</p>
+      <p><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${escapeHtml(parte.encargado_nombre || "Sin asignar")}</p>
       ${renderStatus(parte.estado)}
       <div class="card-actions">
       ${canWritePartes ? `<button class="icon-btn edit" data-action="edit" data-id="${parte.id_parte}" onclick="openParteModal('edit', ${parte.id_parte})"><i class="fas fa-edit"></i></button>
@@ -846,6 +907,320 @@ function openExport() {
   document.getElementById("exportModal").classList.add("show");
 }
 
+/** Abre el modal de importación si el rol tiene permiso. */
+async function openImport() {
+  if (!canWritePartes) {
+    showToast("No tienes permiso para importar partes", "error");
+    return;
+  }
+  await loadUsersSelect();
+  resetImportModal();
+  document.getElementById("importModal").classList.add("show");
+}
+
+/** Reinicia el importador para una nueva carga. */
+function resetImportModal() {
+  importRowsData = [];
+  importSkippedRows = [];
+  importFileInput.value = "";
+  importFileTitle.textContent = "Seleccionar archivo";
+  importFileHint.textContent = "Formatos aceptados: .xlsx, .xls, .csv, imagen o PDF.";
+  importStatus.textContent = "Descarga la plantilla o selecciona un archivo para previsualizar.";
+  setImportType("excel");
+  renderImportRows();
+}
+
+/** Cambia el tipo de archivo esperado por el importador. */
+function setImportType(type) {
+  importType = type;
+  document.querySelectorAll("[data-import-type]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.importType === type);
+  });
+  const acceptByType = {
+    excel: ".xlsx,.xls,.csv,.html",
+    image: ".png,.jpg,.jpeg",
+    pdf: ".pdf",
+  };
+  importFileInput.accept = acceptByType[type] || acceptByType.excel;
+  if (type === "excel") {
+    importFileHint.textContent = "Sube la plantilla en .xlsx, .xls o .csv para crear partes.";
+  } else if (type === "image") {
+    importFileHint.textContent = "Sube PNG/JPEG. El servidor intentará leerlo con OCR.space.";
+  } else {
+    importFileHint.textContent = "Sube PDF. El servidor intentará PdfParser y usará OCR.space si necesita OCR.";
+  }
+}
+
+/** Descarga una plantilla que el usuario puede llenar en Excel. */
+function downloadImportTemplate() {
+  const headers = importTemplateHeaders();
+  const sample = [
+    "FIG-2026-001",
+    "Accidente de tránsito",
+    "2026-06-18",
+    "14:30",
+    "Policía Municipal",
+    "Alcantar Roberto",
+    "Alejandro",
+    "Activo",
+    "Sin clasificar",
+    "Km 12 carretera Morelia-Pátzcuaro",
+    "Dirección encontrada",
+    "19.7000",
+    "-101.1900",
+    "1",
+    "0",
+    "0",
+    "0",
+    "0",
+    "Sin observaciones",
+    "Vehículo",
+    "Nissan",
+    "Tsuru",
+    "Sedán",
+    "ABC123SERIE",
+    "ABC-123",
+    "Sin corralón",
+    "Sin clasificar",
+    "Sin daños visibles",
+  ];
+  const html = `
+    <html><head><meta charset="utf-8" />
+    <style>
+      body{font-family:Arial,sans-serif}
+      h1{color:#123055}
+      th{background:#123055;color:#fff;font-weight:800}
+      th,td{border:1px solid #b9c0d4;padding:8px;text-align:left;mso-number-format:'\\@'}
+      table{border-collapse:collapse;width:100%}
+    </style></head><body>
+      <h1>Plantilla de importación de partes</h1>
+      <table><thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+      <tbody><tr>${sample.map((value) => `<td>${escapeHtml(value)}</td>`).join("")}</tr></tbody></table>
+    </body></html>`;
+  downloadBlob(html, "plantilla-importar-partes.xls", "application/vnd.ms-excel;charset=utf-8");
+}
+
+/** Encabezados reconocidos al leer la plantilla de importación. */
+function importTemplateHeaders() {
+  return [
+    "folio",
+    "tipo_parte",
+    "fecha",
+    "hora",
+    "respondiente_nombre",
+    "mp_nombre",
+    "encargado_nombre",
+    "estado",
+    "gravedad_general",
+    "ubicacion_kilometro",
+    "ubicacion_direccion",
+    "ubicacion_lat",
+    "ubicacion_lng",
+    "numero_personas",
+    "personas_fallecidas",
+    "numero_fallecidos",
+    "personas_heridas",
+    "numero_heridos",
+    "observaciones",
+    "tipo_vehiculo",
+    "marca",
+    "modelo",
+    "tipo",
+    "numero_serie",
+    "numero_placa",
+    "corralon",
+    "estatus_vehiculo",
+    "danos_vehiculo",
+  ];
+}
+
+/** Lee el archivo seleccionado y prepara la vista previa. */
+async function handleImportFile() {
+  const file = importFileInput.files?.[0];
+  if (!file) return;
+  importFileTitle.textContent = file.name;
+  importStatus.textContent = "Leyendo archivo...";
+
+  try {
+    importRowsData = await previewImportFile(file);
+    importStatus.textContent = importRowsData.length
+      ? `Se detectaron ${importRowsData.length} parte(s) nuevo(s).${importSkippedText()} Revisa la vista previa antes de crear.`
+      : `No se encontraron partes nuevos.${importSkippedText()}`;
+    renderImportRows();
+  } catch (error) {
+    if (importType === "excel") {
+      try {
+        importRowsData = await readImportSpreadsheet(file);
+        importSkippedRows = [];
+        importStatus.textContent = importRowsData.length
+          ? `Se detectaron ${importRowsData.length} parte(s) desde el navegador.`
+          : "No se encontraron filas con datos en el archivo.";
+        renderImportRows();
+        return;
+      } catch (_) {
+        // Si el respaldo local tambien falla, se muestra el error original del servidor.
+      }
+    }
+    importRowsData = [];
+    importStatus.textContent = error.message || "No se pudo leer el archivo.";
+    renderImportRows();
+  }
+}
+
+/** Envia el archivo al backend para usar OCR.space, PdfParser o PhpSpreadsheet. */
+async function previewImportFile(file) {
+  const formData = new FormData();
+  formData.append("tipo", importType);
+  formData.append("archivo", file);
+  const data = await api("/api/partes/import/preview", { method: "POST", body: formData });
+  if (!data?.success) {
+    throw new Error(data?.error || "No se pudo previsualizar el archivo.");
+  }
+  importSkippedRows = Array.isArray(data.skipped) ? data.skipped : [];
+  return Array.isArray(data.data) ? data.data : [];
+}
+/** Lee Excel/CSV usando SheetJS si esta disponible y un respaldo HTML/CSV si no. */
+async function readImportSpreadsheet(file) {
+  const lower = file.name.toLowerCase();
+  if (window.XLSX) {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array", cellDates: false });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    return normalizeImportRows(XLSX.utils.sheet_to_json(sheet, { defval: "" }));
+  }
+  const text = await file.text();
+  if (lower.endsWith(".csv")) return normalizeImportRows(parseCsv(text));
+  return normalizeImportRows(parseHtmlImportTable(text));
+}
+
+/** Convierte una tabla HTML guardada como .xls en filas. */
+function parseHtmlImportTable(text) {
+  const doc = new DOMParser().parseFromString(text, "text/html");
+  const rows = [...doc.querySelectorAll("tr")].map((row) => [...row.children].map((cell) => cell.textContent.trim()));
+  const headers = rows.shift() || [];
+  return rows.map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] || ""])));
+}
+
+/** Parser sencillo de CSV para la plantilla. */
+function parseCsv(text) {
+  const rows = text.trim().split(/\r?\n/).map((line) => line.split(",").map((cell) => cell.trim().replace(/^"|"$/g, "")));
+  const headers = rows.shift() || [];
+  return rows.map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] || ""])));
+}
+
+/** Normaliza filas del archivo al payload que entiende la API de partes. */
+function normalizeImportRows(rows) {
+  return rows
+    .map((row) => {
+      const normalized = {};
+      Object.entries(row).forEach(([key, value]) => {
+        normalized[normalizeImportHeader(key)] = String(value ?? "").trim();
+      });
+      if (!Object.values(normalized).some(Boolean)) return null;
+      return {
+        folio: normalized.folio,
+        tipo_parte: normalized.tipo_parte || normalized.motivo,
+        fecha: excelDateValue(normalized.fecha),
+        hora: normalized.hora,
+        respondiente_nombre: normalized.respondiente_nombre || normalized.respondiente,
+        mp_nombre: normalized.mp_nombre || normalized.mp,
+        asignado_a: findUserIdByName(normalized.encargado_nombre || normalized.usuario_encargado),
+        estado: normalized.estado || "Activo",
+        gravedad_general: normalized.gravedad_general || "Sin clasificar",
+        ubicacion_kilometro: normalized.ubicacion_kilometro,
+        ubicacion_direccion: normalized.ubicacion_direccion,
+        ubicacion_lat: normalized.ubicacion_lat,
+        ubicacion_lng: normalized.ubicacion_lng,
+        numero_personas: normalized.numero_personas,
+        personas_fallecidas: truthyImportValue(normalized.personas_fallecidas),
+        numero_fallecidos: normalized.numero_fallecidos,
+        personas_heridas: truthyImportValue(normalized.personas_heridas),
+        numero_heridos: normalized.numero_heridos,
+        observaciones: normalized.observaciones,
+        vehiculos: [{
+          tipo_vehiculo: normalized.tipo_vehiculo || "Vehículo",
+          marca: normalized.marca,
+          modelo: normalized.modelo,
+          tipo: normalized.tipo,
+          numero_serie: normalized.numero_serie,
+          numero_placa: normalized.numero_placa,
+          corralon: normalized.corralon,
+          estatus_vehiculo: normalized.estatus_vehiculo || "Sin clasificar",
+          danos_vehiculo: normalized.danos_vehiculo,
+        }],
+      };
+    })
+    .filter(Boolean);
+}
+
+/** Normaliza encabezados para aceptar acentos, espacios y mayusculas. */
+function normalizeImportHeader(header = "") {
+  return String(header)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+/** Convierte fechas numericas de Excel o texto a YYYY-MM-DD. */
+function excelDateValue(value) {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  if (/^\d+(\.\d+)?$/.test(value)) {
+    const date = new Date(Math.round((Number(value) - 25569) * 86400 * 1000));
+    return Number.isNaN(date.getTime()) ? value : date.toISOString().slice(0, 10);
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString().slice(0, 10);
+}
+
+/** Convierte Si/No de la plantilla a bandera booleana. */
+function truthyImportValue(value) {
+  return ["1", "si", "sí", "true", "x"].includes(String(value || "").trim().toLowerCase());
+}
+
+/** Busca el id del usuario encargado a partir del nombre escrito en la plantilla. */
+function findUserIdByName(name = "") {
+  const cleanName = String(name || "").trim().toLowerCase();
+  if (!cleanName || !Array.isArray(usersCache)) return "";
+  const found = usersCache.find((user) => String(user.nombre || "").trim().toLowerCase() === cleanName);
+  return found?.id_usuario || "";
+}
+
+/** Pinta la vista previa de partes que se crearan desde la plantilla. */
+function renderImportRows() {
+  importRows.innerHTML = importRowsData.map((parte, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${escapeHtml(parte.folio || "Se generará")}</td>
+      <td>${escapeHtml(parte.tipo_parte || "Sin motivo")}</td>
+      <td>${escapeHtml(parte.fecha || "Sin fecha")}</td>
+      <td>${escapeHtml(parte.mp_nombre || "Sin MP")}</td>
+      <td>${escapeHtml(parte.respondiente_nombre || "Sin respondiente")}</td>
+      <td>${escapeHtml(parte.estado || "Activo")}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="7">Sin datos para previsualizar.</td></tr>`;
+  updateImportCount();
+}
+
+/** Crea en la API los partes previsualizados. */
+async function createImportedPartes() {
+  if (!importRowsData.length) {
+    showToast("Carga una plantilla con partes antes de importar", "error");
+    return;
+  }
+  showConfirm("Crear partes importados", `Se crearán ${importRowsData.length} parte(s). ¿Deseas continuar?`, async () => {
+    let created = 0;
+    for (const row of importRowsData) {
+      const data = await api("/api/partes", { method: "POST", body: JSON.stringify(row) });
+      if (data?.success) created += 1;
+    }
+    closeModal("importModal");
+    await loadPartes();
+    showToast(`Importación completada: ${created} parte(s) creados`);
+  });
+}
 /** Pinta las filas seleccionables dentro del modal de exportacion. */
 function renderExportRows() {
   const q = exportSearch.value.trim().toLowerCase();
@@ -860,11 +1235,11 @@ function renderExportRows() {
         (parte, index) => `
           <tr>
             <td>${index + 1}</td>
-            <td>${parte.folio || ""}</td>
+            <td>${escapeHtml(parte.folio || "")}</td>
             <td>${parte.respondiente_nombre || "Parte de tránsito"}</td>
             <td>${formatDate(parte.fecha)}</td>
-            <td>${parte.mp_nombre || "Sin MP"}</td>
-            <td><span class="person-cell"><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${parte.encargado_nombre || "Sin asignar"}</span></td>
+            <td>${escapeHtml(parte.mp_nombre || "Sin MP")}</td>
+            <td><span class="person-cell"><img class="avatar-mini" src="${parte.encargado_foto || "/img/usuario.png"}" alt="" /> ${escapeHtml(parte.encargado_nombre || "Sin asignar")}</span></td>
             <td class="export-select-cell"><input class="export-check" type="checkbox" value="${parte.id_parte}" ${exportSelectAll.checked ? "checked" : ""} /></td>
           </tr>
         `,
@@ -905,9 +1280,10 @@ async function exportPartes(type) {
     downloadExport(type, detailed);
     await api("/api/partes/export", { method: "POST", body: JSON.stringify({ tipo: type, total: selected.length }) });
     closeModal("exportModal");
-    showToast("Exportacion realizada con exito");
+    showToast("Exportación realizada con éxito");
   });
 }
+
 
 /** Solicita a la API los datos completos de cada parte seleccionado. */
 async function loadDetailedParts(rows) {
@@ -936,6 +1312,19 @@ function downloadExport(type, rows) {
 function updateExportCount() {
   const total = document.querySelectorAll(".export-check:checked").length;
   exportCount.textContent = `${total} seleccionado${total === 1 ? "" : "s"}`;
+}
+
+/** Actualiza el contador de partes seleccionados para importar. */
+function updateImportCount() {
+  const total = importRowsData.length;
+  const skipped = importSkippedRows.length;
+  importCount.textContent = `${total} nuevo${total === 1 ? "" : "s"}${skipped ? `, ${skipped} omitido${skipped === 1 ? "" : "s"}` : ""}`;
+}
+
+/** Texto corto para explicar folios omitidos por duplicado. */
+function importSkippedText() {
+  const total = importSkippedRows.length;
+  return total ? ` ${total} repetido${total === 1 ? "" : "s"} omitido${total === 1 ? "" : "s"}.` : "";
 }
 
 /** Construye el HTML imprimible usado para exportar en PDF. */
@@ -1101,6 +1490,13 @@ function exportField(label, value) {
   return `<div class="field"><b>${escapeHtml(label)}</b><span>${fieldHtml(value)}</span></div>`;
 }
 
+/** Construye el nombre visual del parte dentro del Excel. */
+function excelPartName(parte) {
+  const folio = fieldHtml(parte.folio, "Parte sin folio");
+  const name = fieldHtml(parte.respondiente_nombre || parte.tipo_parte, "Sin nombre del parte");
+  return `<div class="part-name"><strong>${folio}</strong><span>${name}</span></div>`;
+}
+
 /** Construye un archivo HTML compatible con Excel con resumen y detalle. */
 function excelHtml(rows) {
   const generatedAt = escapeHtml(new Date().toLocaleString("es-MX"));
@@ -1109,32 +1505,36 @@ function excelHtml(rows) {
       <head>
         <meta charset="utf-8" />
         <style>
-          body{font-family:Arial,sans-serif}
-          h1{color:#06145f}
+          body{font-family:Arial,sans-serif;color:#111827;background:#ffffff}
+          h1{margin:0 0 6px;color:#06145f;font-size:22px}
+          p{margin:0 0 16px;color:#4b5563}
           table{border-collapse:collapse;width:100%;margin-bottom:18px;table-layout:auto}
-          th{background:#06145f;color:#fff;font-weight:700}
+          thead th{background:#123055;color:#ffffff;font-weight:800;text-transform:uppercase}
           th,td{border:1px solid #b9c0d4;padding:8px;text-align:left;vertical-align:top;white-space:normal}
+          tbody tr:nth-child(even){background:#f8fafc}
           td.no,td.center{text-align:center}
+          .part-name strong{display:block;color:#06145f;font-size:13px;font-weight:800}
+          .part-name span{display:block;margin-top:3px;color:#334155;font-size:12px}
           .empty-field{color:#6b7280;font-style:italic}
         </style>
       </head>
       <body>
-        <h1>Partes de transito</h1>
+        <h1>Partes de tr&aacute;nsito</h1>
         <p>Total de partes: ${rows.length} | Generado: ${generatedAt}</p>
         <table>
           <thead>
             <tr>
-              <th>No.</th><th>Folio</th><th>Motivo</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Gravedad</th>
-              <th>Respondiente</th><th>MP asignado</th><th>Usuario encargado</th><th>Kilometro</th><th>Direccion</th><th>Latitud</th><th>Longitud</th>
+              <th>No.</th><th>Parte</th><th>Motivo</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Gravedad</th>
+              <th>Respondiente</th><th>MP asignado</th><th>Usuario encargado</th><th>Kil&oacute;metro</th><th>Direcci&oacute;n</th><th>Latitud</th><th>Longitud</th>
               <th>Personas</th><th>Detalle personas</th><th>Personas fallecidas</th><th>Fallecidos</th><th>Personas heridas</th><th>Heridos</th><th>Otros</th>
-              <th>Observacion fallecidos</th><th>Observaciones</th><th>Vehiculos</th><th>ID parte</th>
+              <th>Observaci&oacute;n fallecidos</th><th>Observaciones</th><th>Veh&iacute;culos</th><th>ID parte</th>
             </tr>
           </thead>
           <tbody>
             ${rows.map((parte, index) => `
               <tr>
                 <td class="no">${index + 1}</td>
-                <td>${fieldHtml(parte.folio)}</td>
+                <td>${excelPartName(parte)}</td>
                 <td>${fieldHtml(parte.tipo_parte)}</td>
                 <td>${fieldHtml(formatDate(parte.fecha))}</td>
                 <td>${fieldHtml(parte.hora)}</td>
@@ -1165,94 +1565,12 @@ function excelHtml(rows) {
       </body>
     </html>
   `;
-  return `
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <style>
-          body{font-family:Arial,sans-serif}
-          h1{color:#06145f}
-          h2{margin-top:22px;color:#06145f}
-          table{border-collapse:collapse;width:100%;margin-bottom:18px}
-          th{background:#06145f;color:#fff;font-weight:700}
-          th,td{border:1px solid #b9c0d4;padding:8px;text-align:left;vertical-align:top}
-          .section{background:#eef2ff;color:#06145f;font-weight:700}
-        </style>
-      </head>
-      <body>
-        <h1>Partes de tránsito</h1>
-        <p>Total de partes: ${rows.length} | Generado: ${escapeHtml(new Date().toLocaleString("es-MX"))}</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Folio</th><th>Motivo</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Gravedad</th>
-              <th>Respondiente</th><th>MP asignado</th><th>Usuario encargado</th><th>Kilómetro</th><th>Dirección</th><th>Latitud</th><th>Longitud</th>
-              <th>Personas</th><th>Detalle personas</th><th>Fallecidos</th><th>Heridos</th><th>Observaciones</th><th>Vehículos</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map((parte) => `
-              <tr>
-                <td>${fieldHtml(parte.folio)}</td>
-                <td>${fieldHtml(parte.tipo_parte)}</td>
-                <td>${fieldHtml(formatDate(parte.fecha))}</td>
-                <td>${fieldHtml(parte.hora)}</td>
-                <td>${fieldHtml(parte.estado)}</td>
-                <td>${fieldHtml(parte.gravedad_general)}</td>
-                <td>${fieldHtml(parte.respondiente_nombre)}</td>
-                <td>${fieldHtml(parte.mp_nombre)}</td>
-                <td>${fieldHtml(parte.encargado_nombre)}</td>
-                <td>${fieldHtml(parte.ubicacion_kilometro)}</td>
-                <td>${fieldHtml(parte.ubicacion_direccion)}</td>
-                <td>${fieldHtml(parte.ubicacion_lat)}</td>
-                <td>${fieldHtml(parte.ubicacion_lng)}</td>
-                <td>${fieldHtml(parte.numero_personas)}</td>
-                <td>${fieldHtml(peopleSummary(parte.personas_detalle))}</td>
-                <td>${fieldHtml(parte.numero_fallecidos)}</td>
-                <td>${fieldHtml(parte.numero_heridos)}</td>
-                <td>${fieldHtml(parte.observaciones)}</td>
-                <td>${fieldHtml(vehicleSummary(parte.vehiculos))}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-        ${rows.map((parte) => `
-          <h2>${fieldHtml(parte.folio, "Parte sin folio")}</h2>
-          <table>
-            <tr><td class="section" colspan="2">Datos generales</td></tr>
-            <tr><th>Motivo del parte</th><td>${fieldHtml(parte.tipo_parte)}</td></tr>
-            <tr><th>Respondiente</th><td>${fieldHtml(parte.respondiente_nombre)}</td></tr>
-            <tr><th>MP asignado</th><td>${fieldHtml(parte.mp_nombre)}</td></tr>
-            <tr><th>Encargado</th><td>${fieldHtml(parte.encargado_nombre)}</td></tr>
-            <tr><th>Kilómetro o referencia</th><td>${fieldHtml(parte.ubicacion_kilometro)}</td></tr>
-            <tr><th>Dirección OpenStreetMap</th><td>${fieldHtml(parte.ubicacion_direccion)}</td></tr>
-            <tr><th>Coordenadas</th><td>${fieldHtml([parte.ubicacion_lat, parte.ubicacion_lng].filter(Boolean).join(", "))}</td></tr>
-            <tr><th>Personas fallecidas</th><td>${fieldHtml(boolText(parte.personas_fallecidas))}</td></tr>
-            <tr><th>Número de fallecidos</th><td>${fieldHtml(parte.numero_fallecidos)}</td></tr>
-            <tr><th>Observación de fallecidos</th><td>${fieldHtml(parte.observacion_fallecidos)}</td></tr>
-            <tr><th>Personas heridas</th><td>${fieldHtml(boolText(parte.personas_heridas))}</td></tr>
-            <tr><th>Otros</th><td>${fieldHtml(boolText(parte.otros))}</td></tr>
-            <tr><th>Observaciones</th><td>${fieldHtml(parte.observaciones)}</td></tr>
-          </table>
-          <table>
-            <tr><td class="section" colspan="4">Personas involucradas</td></tr>
-            <tr><th>#</th><th>Nombre</th><th>Vehículo</th><th>Participación</th></tr>
-            ${renderPeopleRows(parte.personas_detalle, true)}
-          </table>
-          <table>
-            <tr><td class="section" colspan="10">Vehículos</td></tr>
-            <tr><th>#</th><th>Clase</th><th>Marca</th><th>Modelo</th><th>Tipo</th><th>No. Serie</th><th>No. Placa</th><th>Corralón</th><th>Estatus</th><th>Daños</th></tr>
-            ${renderVehicleRows(parte.vehiculos, true)}
-          </table>
-        `).join("")}
-      </body>
-    </html>
-  `;
 }
 
 /** Oculta botones de crear/exportar segun permisos del rol actual. */
 function applyPartPermissions() {
   document.getElementById("createParteBtn").hidden = !canWritePartes;
+  document.getElementById("openImportBtn").hidden = !canWritePartes;
   document.getElementById("openExportBtn").hidden = !canExportPartes;
 }
 
@@ -1602,6 +1920,213 @@ function boolText(value) {
 }
 
 /** Escapa texto para insertarlo como contenido HTML seguro. */
+/** Descarga la plantilla con el mismo formato que usa la exportacion de partes. */
+function downloadImportTemplate() {
+  const sample = {
+    id_parte: "",
+    folio: "FIG-2026-001",
+    tipo_parte: "Accidente de tránsito",
+    fecha: "2026-06-18",
+    hora: "14:30",
+    estado: "Activo",
+    gravedad_general: "Sin clasificar",
+    respondiente_nombre: "Policía Municipal",
+    mp_nombre: "Alcantar Roberto",
+    encargado_nombre: "Alejandro",
+    fecha_creacion: "",
+    ubicacion_kilometro: "Km 12 carretera Morelia-Pátzcuaro",
+    ubicacion_direccion: "Dirección encontrada",
+    numero_personas: "1",
+    personas_detalle: "",
+    personas_fallecidas: "No",
+    numero_fallecidos: "",
+    personas_heridas: "No",
+    numero_heridos: "",
+    otros: "No",
+    gravedad: "Sin clasificar",
+    observacion_fallecidos: "",
+    observaciones: "Sin observaciones",
+    vehiculos: "Vehículo 1: Marca Nissan / Clase Vehículo / Modelo Tsuru / Tipo Sedán / Serie ABC123SERIE / Placa ABC-123 / Corralón Sin corralón / Estatus Sin clasificar / Daños Sin daños visibles",
+  };
+  downloadBlob(excelWorkbookHtml([sample], "Plantilla de importación de partes"), "plantilla-importar-partes.xls", "application/vnd.ms-excel;charset=utf-8");
+}
+
+/** Encabezados visibles que debe llenar el usuario en la plantilla. */
+function importTemplateHeaders() {
+  return excelPartesColumns.map((column) => column.label);
+}
+
+/** Lee Excel/CSV usando la misma deteccion de encabezados que el servidor. */
+async function readImportSpreadsheet(file) {
+  const lower = file.name.toLowerCase();
+  if (window.XLSX) {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array", cellDates: false });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    return normalizeImportRows(rowsToImportObjects(XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" })));
+  }
+  const text = await file.text();
+  if (lower.endsWith(".csv")) return normalizeImportRows(parseCsv(text));
+  return normalizeImportRows(parseHtmlImportTable(text));
+}
+
+/** Convierte una tabla HTML guardada como .xls en filas. */
+function parseHtmlImportTable(text) {
+  const doc = new DOMParser().parseFromString(text, "text/html");
+  const rows = [...doc.querySelectorAll("tr")].map((row) => [...row.children].map((cell) => cell.textContent.trim()));
+  return rowsToImportObjects(rows);
+}
+
+/** Parser sencillo de CSV para la plantilla. */
+function parseCsv(text) {
+  const rows = text.trim().split(/\r?\n/).map((line) => line.split(",").map((cell) => cell.trim().replace(/^"|"$/g, "")));
+  return rowsToImportObjects(rows);
+}
+
+/** Encuentra la fila de encabezados real aunque el Excel tenga un titulo arriba. */
+function rowsToImportObjects(rows) {
+  const normalizedRows = rows.map((row) => Object.values(row || {}).map((cell) => String(cell ?? "").trim()));
+  const headerIndex = normalizedRows.findIndex((row) => importHeaderScore(row) >= 3);
+  if (headerIndex < 0) return [];
+  const headers = normalizedRows[headerIndex];
+  return normalizedRows.slice(headerIndex + 1)
+    .filter((row) => row.some(Boolean))
+    .map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] || ""])));
+}
+
+/** Da puntos a una fila para saber si parece encabezado de la plantilla. */
+function importHeaderScore(row) {
+  const accepted = new Set([...importTemplateHeaders(), "tipo_parte", "mp_nombre", "encargado_nombre", "ubicacion_kilometro", "numero_placa"].map(normalizeImportHeader));
+  return row.reduce((score, cell) => score + (accepted.has(normalizeImportHeader(cell)) ? 1 : 0), 0);
+}
+
+/** Limpia celdas que vienen del export como "Campo vacio". */
+function importCellValue(value) {
+  const clean = String(value ?? "").trim();
+  return /^campo vac[ií]o$/i.test(clean) ? "" : clean;
+}
+
+/** Normaliza filas del archivo al payload que entiende la API de partes. */
+function normalizeImportRows(rows) {
+  return rows
+    .map((row) => {
+      const normalized = {};
+      Object.entries(row).forEach(([key, value]) => {
+        normalized[normalizeImportHeader(key)] = importCellValue(value);
+      });
+      if (!Object.values(normalized).some(Boolean)) return null;
+      const vehicles = parseVehicleSummary(normalized.vehiculos);
+      return {
+        folio: normalized.folio,
+        tipo_parte: normalized.tipo_parte || normalized.motivo,
+        fecha: excelDateValue(normalized.fecha),
+        hora: normalized.hora,
+        respondiente_nombre: normalized.respondiente_nombre || normalized.respondiente,
+        mp_nombre: normalized.mp_nombre || normalized.mp || normalized.mp_asignado,
+        asignado_a: findUserIdByName(normalized.encargado_nombre || normalized.usuario_encargado),
+        estado: normalized.estado || "Activo",
+        gravedad_general: normalized.gravedad_general || "Sin clasificar",
+        ubicacion_kilometro: normalized.ubicacion_kilometro || normalized.kilometro_o_referencia,
+        ubicacion_direccion: normalized.ubicacion_direccion || normalized.direccion,
+        ubicacion_lat: normalized.ubicacion_lat,
+        ubicacion_lng: normalized.ubicacion_lng,
+        numero_personas: normalized.numero_personas || normalized.total_personas,
+        personas_fallecidas: truthyImportValue(normalized.personas_fallecidas || normalized.fallecidas),
+        numero_fallecidos: normalized.numero_fallecidos,
+        personas_heridas: truthyImportValue(normalized.personas_heridas || normalized.heridas),
+        numero_heridos: normalized.numero_heridos,
+        otros: truthyImportValue(normalized.otros),
+        gravedad: normalized.gravedad || normalized.gravedad_personas,
+        observacion_fallecidos: normalized.observacion_fallecidos,
+        observaciones: normalized.observaciones,
+        vehiculos: vehicles.length ? vehicles : [{
+          tipo_vehiculo: normalized.tipo_vehiculo || "Vehículo",
+          marca: normalized.marca,
+          modelo: normalized.modelo,
+          tipo: normalized.tipo,
+          numero_serie: normalized.numero_serie,
+          numero_placa: normalized.numero_placa,
+          corralon: normalized.corralon,
+          estatus_vehiculo: normalized.estatus_vehiculo || "Sin clasificar",
+          danos_vehiculo: normalized.danos_vehiculo,
+        }],
+      };
+    })
+    .filter(Boolean);
+}
+
+/** Interpreta la columna "Vehiculos" generada por la exportacion del sistema. */
+function parseVehicleSummary(value = "") {
+  const text = String(value || "").trim();
+  if (!text || text.toLowerCase().includes("campo vac")) return [];
+  return text.split("|").map((chunk) => {
+    const read = (label) => {
+      const match = chunk.match(new RegExp(`${label}\\s+([^/|]+)`, "i"));
+      return match ? match[1].trim() : "";
+    };
+    return {
+      tipo_vehiculo: read("Clase") || "Vehículo",
+      marca: read("Marca"),
+      modelo: read("Modelo"),
+      tipo: read("Tipo"),
+      numero_serie: read("Serie"),
+      numero_placa: read("Placa"),
+      corralon: read("Corral[oó]n"),
+      estatus_vehiculo: read("Estatus") || "Sin clasificar",
+      danos_vehiculo: read("Da[ñn]os"),
+    };
+  }).filter((vehicle) => Object.values(vehicle).some(Boolean));
+}
+
+/** Construye la fila de encabezados con colores por bloque. */
+function excelHeaderRowHtml() {
+  return excelPartesColumns
+    .map((column) => `<th style="background:${excelHeaderColors[column.group]};color:#ffffff;font-weight:800">${escapeHtml(column.label)}</th>`)
+    .join("");
+}
+
+/** Devuelve el valor de una columna de exportacion. */
+function excelColumnValue(parte, column) {
+  return column.value ? column.value(parte) : parte[column.key];
+}
+
+/** Construye una fila de Excel con el orden oficial de columnas. */
+function excelDataRowHtml(parte) {
+  return `<tr>${excelPartesColumns.map((column) => `<td>${fieldHtml(excelColumnValue(parte, column))}</td>`).join("")}</tr>`;
+}
+
+/** Construye un archivo HTML compatible con Excel. */
+function excelWorkbookHtml(rows, title = "Partes de tránsito") {
+  return `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body{font-family:Arial,sans-serif;color:#172033;margin:0;background:#fff}
+          table{border-collapse:collapse;width:100%}
+          th,td{border:1px solid #b9c0d4;padding:8px;text-align:left;vertical-align:top;white-space:normal;mso-number-format:'\\@'}
+          tbody tr:nth-child(even){background:#f8fafc}
+          .empty-field{color:#64748b;font-style:italic}
+        </style>
+      </head>
+      <body>
+        <table>
+          <thead>
+            <tr><th colspan="${excelPartesColumns.length}" style="background:#06145f;color:#ffffff;font-size:18px;text-align:center">${escapeHtml(title)}</th></tr>
+            <tr>${excelHeaderRowHtml()}</tr>
+          </thead>
+          <tbody>${rows.map(excelDataRowHtml).join("")}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
+}
+
+/** Exporta con el mismo formato que debe tener la plantilla de importacion. */
+function excelHtml(rows) {
+  return excelWorkbookHtml(rows, "Partes de tránsito");
+}
+
 function escapeHtml(value = "") {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -1609,6 +2134,117 @@ function escapeHtml(value = "") {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+/** Resume todos los vehiculos en una sola cadena limpia para Excel. */
+function vehicleSummary(vehicles = []) {
+  if (!Array.isArray(vehicles)) {
+    return textValue(vehicles);
+  }
+  return vehicles.length
+    ? vehicles.map((vehicle, index) => `Vehículo ${index + 1}: ${[
+        `Marca ${textValue(vehicle.marca)}`,
+        `Clase ${textValue(vehicle.tipo_vehiculo)}`,
+        `Modelo ${textValue(vehicle.modelo)}`,
+        `Tipo ${textValue(vehicle.tipo)}`,
+        `Serie ${textValue(vehicle.numero_serie)}`,
+        `Placa ${textValue(vehicle.numero_placa)}`,
+        `Corralón ${textValue(vehicle.corralon)}`,
+        `Estatus ${textValue(vehicle.estatus_vehiculo)}`,
+        `Daños ${textValue(vehicle.danos_vehiculo)}`,
+      ].join(" / ")}`).join(" | ")
+    : "Campo vacío";
+}
+
+/** Resume el detalle de personas para Excel. */
+function peopleSummary(people = []) {
+  if (!Array.isArray(people)) {
+    return textValue(people);
+  }
+  return people?.length
+    ? people.map((person, index) => `Persona ${index + 1}: ${[
+        textValue(person.nombre, "Sin nombre"),
+        textValue(person.vehiculo_label, "Sin vehículo"),
+        textValue(person.tipo_participacion, "Civil"),
+      ].join(" / ")}`).join(" | ")
+    : "Campo vacío";
+}
+
+/** Convierte valores vacios en un texto de respaldo. */
+function textValue(value, fallback = "Campo vacío") {
+  const clean = value === undefined || value === null ? "" : String(value).trim();
+  return clean || fallback;
+}
+
+/** Convierte un valor en HTML seguro y marca campos vacios. */
+function fieldHtml(value, fallback = "Campo vacío") {
+  const text = textValue(value, fallback);
+  return text === "Campo vacío"
+    ? `<span class="empty-field">${text}</span>`
+    : escapeHtml(text);
+}
+
+/** Convierte booleanos o banderas numericas en Si/No. */
+function boolText(value) {
+  if (value === undefined || value === null || value === "") return "Campo vacío";
+  return Number(value) || value === true || value === "true" ? "Sí" : "No";
+}
+
+/** Muestra campos que no se pudieron leer del PDF o imagen. */
+function renderImportWarnings(parte, index) {
+  const missing = Array.isArray(parte._missing_fields) ? parte._missing_fields : [];
+  if (!missing.length) return `<span class="import-ok">Completo</span>`;
+  return `<span class="import-warning" title="${escapeAttr(`Fila ${index + 1}: ${missing.join(", ")}`)}">${missing.length} campo${missing.length === 1 ? "" : "s"} por completar</span>`;
+}
+
+/** Pinta la vista previa final con columna de avisos de lectura. */
+function renderImportRows() {
+  importRows.innerHTML = importRowsData.map((parte, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${escapeHtml(parte.folio || (importType === "excel" ? "Se generará" : "Sin folio"))}</td>
+      <td>${escapeHtml(parte.tipo_parte || "Sin motivo")}</td>
+      <td>${escapeHtml(parte.fecha || "Sin fecha")}</td>
+      <td>${escapeHtml(parte.mp_nombre || "Sin MP")}</td>
+      <td>${escapeHtml(parte.respondiente_nombre || "Sin respondiente")}</td>
+      <td>${escapeHtml(parte.estado || "Activo")}</td>
+      <td>${renderImportWarnings(parte, index)}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="8">Sin datos para previsualizar.</td></tr>`;
+  updateImportCount();
+}
+
+/** Crea los partes importados y reporta si alguna fila no se pudo guardar. */
+async function createImportedPartes() {
+  if (!importRowsData.length) {
+    showToast("Carga una plantilla con partes antes de importar", "error");
+    return;
+  }
+  showConfirm("Crear partes importados", `Se crearán ${importRowsData.length} parte(s). ¿Deseas continuar?`, async () => {
+    let created = 0;
+    const failed = [];
+    createImportedPartesBtn.disabled = true;
+    importStatus.textContent = `Importando 0 de ${importRowsData.length} parte(s)...`;
+    for (const [index, row] of importRowsData.entries()) {
+      const payload = { ...row, _import_source: importType };
+      const data = await api("/api/partes", { method: "POST", body: JSON.stringify(payload) });
+      if (data?.success) created += 1;
+      else failed.push(`#${index + 1} ${row.folio || "sin folio"}: ${data?.error || "No se pudo crear"}`);
+      importStatus.textContent = `Importando ${index + 1} de ${importRowsData.length} parte(s)...`;
+    }
+    createImportedPartesBtn.disabled = false;
+    closeModal("importModal");
+    partSearch.value = "";
+    advancedFilters = [];
+    renderAdvancedFilterList();
+    await loadPartes();
+    if (failed.length) {
+      showToast(`Se crearon ${created} de ${importRowsData.length}. Revisa folios repetidos o datos incompletos.`, "error");
+      console.warn("Filas no importadas:", failed);
+      return;
+    }
+    showToast(`Importación completada: ${created} parte(s) creados`);
+  });
 }
 
 partSearch.addEventListener("input", debounce(() => {
@@ -1682,6 +2318,12 @@ exportSelectAll.addEventListener("change", renderExportRows);
 exportRows.addEventListener("change", (event) => {
   if (event.target.classList.contains("export-check")) updateExportCount();
 });
+document.querySelectorAll("[data-import-type]").forEach((button) => {
+  button.addEventListener("click", () => setImportType(button.dataset.importType));
+});
+importFileInput.addEventListener("change", handleImportFile);
+downloadImportTemplateBtn.addEventListener("click", downloadImportTemplate);
+createImportedPartesBtn.addEventListener("click", createImportedPartes);
 
 resetVehicles();
 renderPeopleAssignments(0, []);
@@ -1698,5 +2340,6 @@ window.openParteModal = openParteModal;
 window.deleteParte = deleteParte;
 window.openExport = openExport;
 window.exportPartes = exportPartes;
+window.openImport = openImport;
 window.closeModal = closeModal;
 window.removeAdvancedFilter = removeAdvancedFilter;

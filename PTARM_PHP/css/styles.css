@@ -11,6 +11,9 @@
   --muted: #687386;
   --green: #15803d;
   --red: #dc2626;
+  --yellow: #fffb00;
+  --orange: #ea580c;
+  --blue-rain-water: #4695d6;
   --blue: #2563eb;
   --gold: #b7791f;
   --bg: #f5f7fb;
@@ -738,6 +741,17 @@ select:focus {
   box-shadow: 0 8px 16px rgba(15, 118, 110, 0.14);
 }
 
+.btn.amber {
+  border-color: #d97706;
+  color: #ffffff;
+  background: #d97706;
+  box-shadow: none;
+}
+
+.btn.amber:hover {
+  box-shadow: none;
+}
+
 .btn.black {
   color: #ffffff;
   background: var(--navy);
@@ -1076,6 +1090,28 @@ tbody tr:hover {
   font-weight: 900;
 }
 
+.parte-name-cell {
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+}
+
+.parte-name-cell span {
+  width: fit-content;
+  border-radius: 5px;
+  padding: 3px 7px;
+  color: var(--accent);
+  background: rgba(15, 118, 110, 0.1);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.parte-name-cell strong {
+  color: var(--navy);
+  font-size: 0.94rem;
+  line-height: 1.25;
+}
+
 .card-actions {
   display: flex;
   gap: 8px;
@@ -1237,6 +1273,10 @@ tbody tr:hover {
 }
 
 .modal.export {
+  width: min(980px, calc(100% - 40px));
+}
+
+.modal.import {
   width: min(980px, calc(100% - 40px));
 }
 
@@ -1430,6 +1470,225 @@ tbody tr:hover {
 .export .table-wrap {
   border: 1px solid #e5e7ef;
   background: #ffffff;
+}
+
+.import-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 12px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%);
+}
+
+.import-head strong {
+  color: var(--navy);
+  font-size: 1rem;
+}
+
+.import-head p {
+  max-width: 640px;
+  margin: 7px 0 0;
+  color: #667085;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.import-count {
+  min-width: 132px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #ffffff;
+  background: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-align: center;
+  box-shadow: 0 8px 16px rgba(15, 118, 110, 0.16);
+}
+
+.import-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin: 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.import-search-wrap {
+  width: 100%;
+}
+
+.import-toolbar .inline-check {
+  justify-self: end;
+  min-height: 42px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 10px;
+  padding: 0 14px;
+  background: #ffffff;
+}
+
+.import .table-wrap {
+  max-height: min(430px, 48vh);
+  border: 1px solid #dfe7ef;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: auto;
+}
+
+.import .table-wrap table {
+  min-width: 760px;
+}
+
+.import .table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.import-select-cell {
+  text-align: center;
+}
+
+.import .form-actions {
+  position: sticky;
+  bottom: -26px;
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding: 16px 0 0;
+  background: #ffffff;
+}
+
+.import-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.import-type-card {
+  display: grid;
+  gap: 7px;
+  min-height: 112px;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  padding: 14px;
+  color: var(--navy);
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.import-type-card i {
+  color: #d97706;
+  font-size: 1.35rem;
+}
+
+.import-type-card span {
+  color: #667085;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.import-type-card.active {
+  border-color: #d97706;
+  background: #fff7ed;
+  box-shadow: 0 8px 18px rgba(217, 119, 6, 0.12);
+}
+
+.import-template-note,
+.import-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--navy);
+  background: #f8fafc;
+}
+
+.import-template-note i {
+  color: #2563eb;
+  font-size: 1.2rem;
+}
+
+.import-template-note span,
+#importStatus {
+  color: #667085;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.import-dropzone {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  margin: 16px 0;
+  border: 2px dashed #f59e0b;
+  border-radius: 12px;
+  padding: 26px 18px;
+  color: var(--navy);
+  background: #fffbeb;
+  text-align: center;
+  cursor: pointer;
+}
+
+.import-dropzone input {
+  display: none;
+}
+
+.import-dropzone > i {
+  color: #d97706;
+  font-size: 2rem;
+}
+
+.import-dropzone span {
+  color: #667085;
+  font-weight: 700;
+}
+
+.import-status-row {
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.import-status-row .import-count {
+  background: #d97706;
+  box-shadow: 0 8px 16px rgba(217, 119, 6, 0.16);
+}
+
+.import-preview-wrap {
+  min-height: 260px;
+  max-height: min(520px, 55vh);
+}
+
+.import-preview-table th {
+  white-space: nowrap;
+}
+
+.import-ok,
+.import-warning {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.import-ok {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.import-warning {
+  color: #92400e;
+  background: #fef3c7;
 }
 
 .form-grid {
@@ -2633,6 +2892,33 @@ legend {
     flex-direction: column;
   }
 
+  .import-head,
+  .export-head {
+    flex-direction: column;
+  }
+
+  .import-count,
+  .export-count {
+    width: 100%;
+  }
+
+  .import-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .import-type-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .import-status-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .import-toolbar .inline-check {
+    justify-self: stretch;
+  }
+
   .table-controls {
     align-items: stretch;
     flex-direction: column;
@@ -2703,6 +2989,7 @@ html[data-theme="dark"] .mp-card,
 html[data-theme="dark"] .menu-card,
 html[data-theme="dark"] .modal,
 html[data-theme="dark"] .export-head,
+html[data-theme="dark"] .import-head,
 html[data-theme="dark"] .vehicle-card,
 html[data-theme="dark"] .location-fieldset,
 html[data-theme="dark"] .location-preview,
@@ -2716,6 +3003,7 @@ html[data-theme="dark"] .stats-card,
 html[data-theme="dark"] .stats-chart-panel,
 html[data-theme="dark"] .stats-side-panel,
 html[data-theme="dark"] .stats-export-panel,
+html[data-theme="dark"] .import-toolbar .inline-check,
 html[data-theme="dark"] .export-chart-options .inline-check,
 html[data-theme="dark"] .stats-detail-card,
 html[data-theme="dark"] .advanced-search-summary,
@@ -2753,6 +3041,8 @@ html[data-theme="dark"] .account-row strong,
 html[data-theme="dark"] .people-grid strong,
 html[data-theme="dark"] .modal-section-title,
 html[data-theme="dark"] .export-head strong,
+html[data-theme="dark"] .import-head strong,
+html[data-theme="dark"] .parte-name-cell strong,
 html[data-theme="dark"] .sub-row,
 html[data-theme="dark"] label,
 html[data-theme="dark"] th {
@@ -2766,6 +3056,7 @@ html[data-theme="dark"] .user-card p,
 html[data-theme="dark"] .mp-card p,
 html[data-theme="dark"] .table-controls,
 html[data-theme="dark"] .account-label,
+html[data-theme="dark"] .import-head p,
 html[data-theme="dark"] .advanced-search-intro span,
 html[data-theme="dark"] .advanced-search-hint,
 html[data-theme="dark"] .section-head p {
@@ -2827,6 +3118,12 @@ html[data-theme="dark"] .btn.red {
   background: var(--red);
 }
 
+html[data-theme="dark"] .btn.amber {
+  border-color: #f59e0b;
+  color: #ffffff;
+  background: #d97706;
+}
+
 html[data-theme="dark"] .btn.outline {
   color: #f8fafc;
   background: #101a2d;
@@ -2839,6 +3136,25 @@ html[data-theme="dark"] .mp-card-icon,
 html[data-theme="dark"] .file-upload input[type="file"]::file-selector-button {
   color: #ffffff;
   background: #174777;
+}
+
+html[data-theme="dark"] .parte-name-cell span {
+  color: #5eead4;
+  background: rgba(20, 184, 166, 0.16);
+}
+
+html[data-theme="dark"] .import-type-card,
+html[data-theme="dark"] .import-template-note,
+html[data-theme="dark"] .import-status-row {
+  border-color: var(--line);
+  color: #f8fafc;
+  background: #0f1b2f;
+}
+
+html[data-theme="dark"] .import-type-card.active,
+html[data-theme="dark"] .import-dropzone {
+  border-color: #f59e0b;
+  background: rgba(217, 119, 6, 0.14);
 }
 
 html[data-theme="dark"] table {

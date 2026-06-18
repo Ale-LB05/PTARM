@@ -52,6 +52,3 @@
     <script src="<?= app_url('js/auth.js') ?>?v=20260616historyphoto"></script>
   </body>
 </html>
-
-
-

@@ -20,6 +20,9 @@ function assetUrl(path = "") {
   return pageUrl(String(path || "").replace(/^\//, ""));
 }
 
+const NOTIFICATION_SEEN_KEY = "ptarmSeenNotifications";
+const NOTIFICATION_VISIBLE_LIMIT = 3;
+
 function apiUrl(path = "") {
   if (String(path).startsWith("/api/")) {
     return pageUrl("api/index.php?path=" + encodeURIComponent(path));
@@ -188,6 +191,7 @@ function ensureNotificationPanel(menu) {
 }
 
 /** Carga actividades relevantes para partes creados por el usuario actual. */
+/** Carga hasta tres actividades nuevas y las marca como vistas al abrir la campana. */
 async function loadNotifications(panel) {
   const list = panel.querySelector("[data-notification-list]");
   list.innerHTML = `
@@ -207,17 +211,20 @@ async function loadNotifications(panel) {
     return;
   }
 
-  if (!data.data.length) {
+  const unseen = (data.data || []).filter((item) => !seenNotificationKeys().has(notificationKey(item)));
+  const visible = unseen.slice(0, NOTIFICATION_VISIBLE_LIMIT);
+
+  if (!visible.length) {
     list.innerHTML = `
       <div class="notification-item">
         <span class="notification-icon"><i class="far fa-file-alt"></i></span>
-        <div><strong>Sin actividad reciente</strong><p>No hay cambios en tus partes creados.</p></div>
+        <div><strong>Sin notificaciones nuevas</strong><p>Las notificaciones abiertas ya fueron limpiadas.</p></div>
       </div>
     `;
     return;
   }
 
-  list.innerHTML = data.data.map((item) => {
+  list.innerHTML = visible.map((item) => {
     const deleted = item.accion === "ELIMINAR";
     const folio = item.folio || extractNotificationFolio(item.descripcion) || "Sin folio";
     const action = deleted ? "Eliminado" : "Modificado";
@@ -234,8 +241,29 @@ async function loadNotifications(panel) {
       </div>
     `;
   }).join("");
+  markNotificationsSeen(visible);
 }
 
+/** Crea una llave estable para saber si una notificación ya se mostró. */
+function notificationKey(item = {}) {
+  return [item.accion, item.fecha, item.folio || extractNotificationFolio(item.descripcion), item.descripcion].filter(Boolean).join("|");
+}
+
+/** Lee las notificaciones vistas guardadas en el navegador. */
+function seenNotificationKeys() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(NOTIFICATION_SEEN_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+/** Marca como vistas las notificaciones que el usuario acaba de abrir. */
+function markNotificationsSeen(items = []) {
+  const seen = seenNotificationKeys();
+  items.forEach((item) => seen.add(notificationKey(item)));
+  localStorage.setItem(NOTIFICATION_SEEN_KEY, JSON.stringify([...seen].slice(-80)));
+}
 /** Extrae un folio desde descripciones de historial de partes eliminados. */
 function extractNotificationFolio(text = "") {
   const match = String(text).match(/Parte\s+([^|]+?)\s+(?:eliminado|editado|actualizado)/i);
@@ -304,7 +332,7 @@ function repairAlertText(value) {
   return text;
 }
 
-/** Muestra mensajes de exito/error usando SweetAlert o el toast local. */
+/** Muestra mensajes de éxito/error usando SweetAlert o el toast local. */
 function showToast(message, type = "success") {
   message = repairAlertText(message);
   if (window.Swal) {
@@ -402,4 +430,3 @@ async function api(path, options = {}) {
     return { success: false, error: "No se pudo conectar con el servidor" };
   }
 }
-
