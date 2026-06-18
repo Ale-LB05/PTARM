@@ -16,42 +16,35 @@
         --soft: #eef3ff;
         --ok: #0f766e;
         --warn: #b45309;
-        --radius: 8px;
+        --radius: 10px;
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * {box-sizing: border-box;}
 
       body {
         margin: 0;
         background: var(--bg);
         color: var(--ink);
         font-family: Arial, Helvetica, sans-serif;
-        line-height: 1.55;
-      }
+        line-height: 1.55;}
 
       header {
         background: var(--brand);
         color: #fff;
-        padding: 22px 16px;
-      }
+        padding: 22px 16px;}
 
       .wrap {
         width: min(1120px, 100%);
-        margin: 0 auto;
-      }
+        margin: 0 auto;}
 
       header h1 {
         margin: 0;
-        font-size: clamp(1.35rem, 5vw, 2rem);
-      }
+        font-size: clamp(1.35rem, 5vw, 2rem);}
 
       header p {
         max-width: 760px;
         margin: 8px 0 0;
-        color: #dbe7ff;
-      }
+        color: #dbe7ff;}
 
       main {
         padding: 18px 12px 34px;
@@ -316,6 +309,8 @@
                 <td>
                   Animaciones que usa la plantilla SB Admin 2 para scroll,
                   sidebar y transiciones.
+                  para que se vean mas completas y mejor visulamente , y tenga precensia
+                  y esto ayuda a que el usuario se sienta mas comodo y tenga una mejor experiencia de usuario
                 </td>
               </tr>
               <tr>
@@ -448,6 +443,49 @@
               <span class="label">Uso</span>Tipografia principal de la interfaz.
             </p>
           </article>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>Importación de archivos</h2>
+          <p>
+            Herramientas usadas por <code>api/index.php</code> para leer
+            archivos antes de crear partes en lote.
+          </p>
+        </div>
+        <div class="table-scroll desktop-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Formato</th>
+                <th>Herramienta</th>
+                <th>Para que se utiliza</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>PNG / JPEG</td>
+                <td>OCR.space API</td>
+                <td>Extrae texto de imagenes mediante OCR usando <code>OCR_SPACE_API_KEY</code>.</td>
+              </tr>
+              <tr>
+                <td>PDF escaneado</td>
+                <td>OCR.space API</td>
+                <td>Lee PDFs que son imagenes escaneadas cuando no tienen texto digital.</td>
+              </tr>
+              <tr>
+                <td>PDF digital</td>
+                <td>Smalot/PdfParser</td>
+                <td>Extrae texto localmente desde PDFs con texto seleccionable.</td>
+              </tr>
+              <tr>
+                <td>Excel .xlsx/.xls</td>
+                <td>PhpSpreadsheet</td>
+                <td>Lee la plantilla de importación para previsualizar y crear partes.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 

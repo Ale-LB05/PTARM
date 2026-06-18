@@ -1,9 +1,15 @@
 <?php require_once __DIR__ . '/../config/db.php'; ?>
+<<<<<<< HEAD
 <!--
   Pantalla Gestionar partes.
   js/partes.js maneja listado, formulario, ubicacion, personas, vehiculos,
   busqueda avanzada y exportaciones. Sus datos vienen de /api/partes.
 -->
+=======
+<!--Pantalla Gestionar partes.
+    js/partes.js maneja listado, formulario, ubicacion, personas, vehiculos,
+    busqueda avanzada y exportaciones. Sus datos vienen de /api/partes.-->
+>>>>>>> 872eef6eaf6101ea1a0bb3edb44c1f9e883fee57
 <!doctype html>
 <html lang="es">
   <head>
@@ -36,7 +42,11 @@
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<<<<<<< HEAD
     <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260616partemodal" />
+=======
+    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260618importador3" />
+>>>>>>> 872eef6eaf6101ea1a0bb3edb44c1f9e883fee57
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
@@ -122,8 +132,10 @@
             </div>
             <div class="toolbar-right">
               <button class="btn blue" id="openExportBtn" onclick="openExport()">
-                <i class="fas fa-file-export"></i> Exportar</button
-              ><button class="btn green" id="createParteBtn" type="button" onclick="openParteModal('create')">
+                <i class="fas fa-file-export"></i> Exportar</button>
+                <button class="btn amber" id="openImportBtn" onclick="openImport()">
+                <i class="fas fa-file-import"></i> Importar</button>
+              <button class="btn green" id="createParteBtn" type="button" onclick="openParteModal('create')">
                 <i class="fas fa-file-medical"></i> Crear nuevo
               </button>
             </div>
@@ -184,7 +196,11 @@
             <div class="parte-section-head">
               <div>
                 <strong>Datos generales</strong>
+<<<<<<< HEAD
                 <span>Informacion principal del parte y asignacion inicial.</span>
+=======
+                <span>Información principal del parte y asignación inicial.</span>
+>>>>>>> 872eef6eaf6101ea1a0bb3edb44c1f9e883fee57
               </div>
             </div>
           <div class="form-grid cols-3">
@@ -262,7 +278,11 @@
           <datalist id="corralonOptions"></datalist>
           <section class="parte-form-section vehicle-section">
           <div class="sub-row">
+<<<<<<< HEAD
             <span>Vehiculos involucrados</span
+=======
+            <span>Vehículos involucrados</span
+>>>>>>> 872eef6eaf6101ea1a0bb3edb44c1f9e883fee57
             ><button class="tiny-add" id="addVehicleBtn" type="button">
               Agregar nuevo vehículo +
             </button>
@@ -363,7 +383,7 @@
                       name="numero_heridos"
                       placeholder="Número de personas" /></label
                   ><div>
-                    <strong>?Gravedad?</strong>
+                    <strong>¿Gravedad?</strong>
                     <div class="radio-list">
                       <label
                         ><input type="radio" name="gravedad" value="Bajo" />
@@ -500,8 +520,8 @@
                 placeholder="Escribe el dato..."
                 required
               />
-              <datalist id="advancedSearchOptions"></datalist></label
-            >
+              <datalist id="advancedSearchOptions"></datalist></label>
+              
           </div>
           <div class="advanced-search-hint">
             <i class="fas fa-info-circle"></i>
@@ -520,6 +540,87 @@
       </div>
     </div>
 
+    <div id="importModal" class="modal-backdrop">
+      <div class="modal import import-modal">
+        <div class="modal-title">
+          <h2><i class="fas fa-file-import"></i> Importar</h2>
+          <button class="modal-close" onclick="closeModal('importModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="import-head">
+            <div>
+              <strong>Importar partes al sistema</strong>
+              <p>Descarga la plantilla, llénala y súbela para crear varios partes en una sola carga.</p>
+            </div>
+            <button class="btn blue outline" type="button" id="downloadImportTemplateBtn">
+              <i class="fas fa-download"></i> Plantilla Excel
+            </button>
+          </div>
+
+          <div class="import-type-grid">
+            <button class="import-type-card active" type="button" data-import-type="excel">
+              <i class="fas fa-file-excel"></i>
+              <strong>Excel</strong>
+              <span>Lee la plantilla y crea partes en lote.</span>
+            </button>
+            <button class="import-type-card" type="button" data-import-type="image">
+              <i class="fas fa-image"></i>
+              <strong>Imagen</strong>
+              <span>Lee fotos con OCR.space.</span>
+            </button>
+            <button class="import-type-card" type="button" data-import-type="pdf">
+              <i class="fas fa-file-pdf"></i>
+              <strong>PDF</strong>
+              <span>Usa PdfParser u OCR.space.</span>
+            </button>
+          </div>
+
+          <div class="import-template-note">
+            <i class="fas fa-table"></i>
+            <div>
+              <strong>Plantilla requerida para Excel</strong>
+              <span>Usa los encabezados de la plantilla para que el sistema sepa qué dato corresponde a cada campo del parte.</span>
+            </div>
+          </div>
+
+          <label class="import-dropzone" for="importFileInput">
+            <input id="importFileInput" type="file" accept=".xlsx,.xls,.csv,.html,.pdf,.png,.jpg,.jpeg" />
+            <i class="fas fa-cloud-upload-alt"></i>
+            <strong id="importFileTitle">Seleccionar archivo</strong>
+            <span id="importFileHint">Formatos aceptados: .xlsx, .xls, .csv, imagen o PDF.</span>
+          </label>
+
+          <div class="import-status-row">
+            <span class="import-count" id="importCount">0 partes detectados</span>
+            <span id="importStatus">Descarga la plantilla o selecciona un archivo para previsualizar.</span>
+          </div>
+
+          <div class="table-wrap import-preview-wrap">
+            <table class="import-preview-table">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Folio</th>
+                  <th>Motivo</th>
+                  <th>Fecha</th>
+                  <th>MP</th>
+                  <th>Respondiente</th>
+                  <th>Estado</th>
+                  <th>Avisos</th>
+                </tr>
+              </thead>
+              <tbody id="importRows"></tbody>
+            </table>
+          </div>
+          <div class="form-actions">
+            <button class="btn amber" type="button" id="createImportedPartesBtn">
+              <i class="fas fa-file-import"></i> Crear partes importados</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div id="exportModal" class="modal-backdrop">
       <div class="modal export">
         <div class="modal-title">
@@ -532,7 +633,7 @@
           <div class="export-head">
             <div>
               <strong>Partes de tránsito</strong>
-              <p>Selecciona los registros que deseas preparar. Cada parte se exportar? con sus datos completos.</p>
+              <p>Selecciona los registros que deseas exportar. Cada parte se preparará con sus datos completos.</p>
             </div>
             <div class="export-count" id="exportCount">0 seleccionados</div>
           </div>
@@ -567,6 +668,7 @@
         </div>
       </div>
     </div>
+
     <div id="toast" class="toast"></div>
     <div id="confirmModal" class="modal-backdrop">
       <div class="modal small">
@@ -581,16 +683,21 @@
         </div>
       </div>
     </div>
+<<<<<<< HEAD
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="<?= app_url('js/common.js') ?>?v=20260616historyphoto"></script>
     <script src="<?= app_url('js/partes.js') ?>?v=20260616exceltable"></script>
+=======
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="<?= app_url('js/common.js') ?>?v=20260618notificaciones"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="<?= app_url('js/partes.js') ?>?v=20260618excelmodelo5"></script>
+>>>>>>> 872eef6eaf6101ea1a0bb3edb44c1f9e883fee57
     <script src="<?= app_url('vendor/jquery/jquery.min.js') ?>"></script>
     <script src="<?= app_url('vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
     <script src="<?= app_url('vendor/jquery-easing/jquery.easing.min.js') ?>"></script>
     <script src="<?= app_url('js/sb-admin-2.min.js') ?>?v=20260616historyphoto"></script>
   </body>
 </html>
-
-
-
