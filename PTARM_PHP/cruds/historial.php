@@ -33,7 +33,7 @@
     <title>Historial | PTARM</title>
     <link rel="icon" type="image/png" href="<?= app_url('img/logot.png') ?>" />
     <link href="<?= app_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" />
-    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260616historyphoto" />
+    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260619advancedmodal" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
@@ -380,7 +380,7 @@
       </div>
     </div>
     <script src="<?= app_url('js/common.js') ?>?v=20260616historyphoto"></script>
-    <script src="<?= app_url('js/historial.js') ?>?v=20260616historyphoto"></script>
+    <script src="<?= app_url('js/historial.js') ?>?v=20260619advancedmodal"></script>
   </body>
 </html>
 

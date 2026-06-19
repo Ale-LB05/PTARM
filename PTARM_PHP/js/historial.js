@@ -33,6 +33,7 @@ const historyAdvancedSearchSummary = document.getElementById("historyAdvancedSea
 const historyAdvancedFilterList = document.getElementById("historyAdvancedFilterList");
 const addHistoryAdvancedFilterBtn = document.getElementById("addHistoryAdvancedFilterBtn");
 const clearHistoryAdvancedSearchBtn = document.getElementById("clearHistoryAdvancedSearchBtn");
+const historyAdvancedSearchActions = historyAdvancedSearchForm.querySelector(".modal-actions");
 const historyTableControls = document.getElementById("historyTableControls");
 const historyTableWrap = document.getElementById("historyTableWrap");
 const statsPanel = document.getElementById("statsPanel");
@@ -61,6 +62,15 @@ const statsDetailModal = document.getElementById("statsDetailModal");
 const statsDetailTitle = document.getElementById("statsDetailTitle");
 const statsDetailSummary = document.getElementById("statsDetailSummary");
 const statsDetailRows = document.getElementById("statsDetailRows");
+
+// Matches the advanced-search action layout used in Gestionar partes.
+historyAdvancedSearchActions.classList.add("advanced-search-actions");
+clearHistoryAdvancedSearchBtn.className = "advanced-clear-btn";
+clearHistoryAdvancedSearchBtn.title = "Limpiar busqueda";
+clearHistoryAdvancedSearchBtn.setAttribute("aria-label", "Limpiar busqueda");
+clearHistoryAdvancedSearchBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+addHistoryAdvancedFilterBtn.classList.remove("blue", "outline");
+addHistoryAdvancedFilterBtn.classList.add("amber");
 
 const statsColors = ["#2563eb", "#0f766e", "#7c3aed", "#b7791f", "#dc2626", "#1499d3"];
 
