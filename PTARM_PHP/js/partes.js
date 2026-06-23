@@ -1390,7 +1390,10 @@ async function exportPartes(type) {
     }
     const detailed = await loadDetailedParts(selected);
     downloadExport(type, detailed);
-    await api("/api/partes/export", { method: "POST", body: JSON.stringify({ tipo: type, total: selected.length }) });
+    await api("/api/partes/export", {
+      method: "POST",
+      body: JSON.stringify({ tipo: type, total: selected.length, folios: selected.map((parte) => parte.folio).filter(Boolean) }),
+    });
     closeModal("exportModal");
     showToast("Exportación realizada con éxito");
   });
@@ -1473,6 +1476,7 @@ function exportHtml(rows) {
           .value{display:block;min-height:15px;font-size:12px;font-weight:700;word-break:break-word}
           .section-title{margin:0;padding:5px 8px;background:#d8dde8;border-top:2px solid #111827;border-bottom:1px solid #111827;color:#111827;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
           .section-title:first-child{border-top:0}
+          .export-part .section-title:nth-of-type(6),.export-part .section-title:nth-of-type(6)+.field-grid{display:none}
           .field-grid{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #111827}
           .field-grid.cols-2{grid-template-columns:repeat(2,1fr)}
           .field-grid.cols-3{grid-template-columns:repeat(3,1fr)}
@@ -1496,7 +1500,6 @@ function exportHtml(rows) {
           <header class="batch-cover">
             <div class="cover-title">Partes de tránsito exportados</div>
             <div class="cover-meta">
-              <span><b>Total de partes:</b> ${rows.length}</span>
               <span><b>Generado:</b> ${escapeHtml(generatedAt)}</span>
             </div>
           </header>
@@ -1518,7 +1521,7 @@ function exportPartSection(parte) {
           <h1>Informe policial homologado</h1>
           <p>Registro del parte de tránsito y datos asociados al hecho</p>
         </div>
-        <div class="iph-code">PTARM<br>${fieldHtml(parte.id_parte)}</div>
+        <div class="iph-code">PTARM</div>
       </div>
       <div class="folio-strip">
         ${officialField("No. de parte / folio", parte.folio, "Parte sin folio", "folio-box")}
@@ -1594,7 +1597,10 @@ function exportPartSection(parte) {
 
 /** Devuelve una celda estilo formato oficial con etiqueta y valor. */
 function officialField(label, value, fallback = "", className = "iph-field") {
-  return `<div class="${className}"><span class="label">${escapeHtml(label)}</span><span class="value">${fieldHtml(value, fallback)}</span></div>`;
+  const privateLabels = ["ID MP", "ID usuario encargado", "ID del parte", "ID respondiente", "ID usuario creador", "Latitud", "Longitud"];
+  if (privateLabels.includes(label)) return "";
+  const visibleLabel = label.includes("OpenStreetMap") ? "Dirección" : label;
+  return `<div class="${className}"><span class="label">${escapeHtml(visibleLabel)}</span><span class="value">${fieldHtml(value, fallback)}</span></div>`;
 }
 
 /** Devuelve un campo de exportacion con etiqueta y valor seguro. */
@@ -2335,10 +2341,11 @@ async function createImportedPartes() {
   showConfirm("Crear partes importados", `Se crearán ${importRowsData.length} parte(s). ¿Deseas continuar?`, async () => {
     let created = 0;
     const failed = [];
+    const importBatch = `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     createImportedPartesBtn.disabled = true;
     importStatus.textContent = `Importando 0 de ${importRowsData.length} parte(s)...`;
     for (const [index, row] of importRowsData.entries()) {
-      const payload = { ...row, _import_source: importType };
+      const payload = { ...row, _import_source: importType, _activity_batch: importBatch };
       const data = await api("/api/partes", { method: "POST", body: JSON.stringify(payload) });
       if (data?.success) created += 1;
       else failed.push(`#${index + 1} ${row.folio || "sin folio"}: ${data?.error || "No se pudo crear"}`);

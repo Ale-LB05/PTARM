@@ -146,6 +146,35 @@
         return $time ? date('Y-m-d', $time) : $value;
     }
 
+    /** Extracts the part folios stored in an activity detail for statistics. */
+    function activity_folios(?string $detail, ?string $folio = null): array
+    {
+        if (clean($folio)) {
+            return [(string) $folio];
+        }
+        $detail = (string) $detail;
+        if (preg_match('/Folios:\s*(.+)$/iu', $detail, $match)) {
+            return array_values(array_filter(array_map('trim', preg_split('/[|,]/', $match[1]) ?: [])));
+        }
+        if (preg_match('/Parte\s+([^\s]+)\s+(?:creado|editado|eliminado)/iu', $detail, $match)) {
+            return [trim($match[1])];
+        }
+        return [];
+    }
+
+    /** Extracts the name and email saved when an administrator creates a user. */
+    function activity_created_user(?string $detail): ?string
+    {
+        $detail = trim((string) $detail);
+        return preg_match('/Usuario creado:\s*(.+)$/iu', $detail, $match) ? trim($match[1]) : null;
+    }
+
+    /** Reads the batch identifier used when several parts are created together. */
+    function activity_batch(?string $detail): ?string
+    {
+        return preg_match('/Lote:\s*([a-zA-Z0-9_-]+)/', (string) $detail, $match) ? $match[1] : null;
+    }
+
     function import_first_match(string $text, array $patterns): ?string
     {
         foreach ($patterns as $pattern) {
@@ -1135,7 +1164,9 @@
                     $photo,
                     (int) ($body['id_rol'] ?? 2),
                 ]);
-                record_activity('CREACION_USUARIO', (int) $user['id_usuario'], null, 'Usuario creado');
+                $createdName = clean($body['nombre'] ?? null) ?: 'Sin nombre';
+                $createdEmail = clean($body['correo'] ?? null) ?: 'Sin correo';
+                record_activity('CREACION_USUARIO', (int) $user['id_usuario'], null, 'Usuario creado: ' . $createdName . ' <' . $createdEmail . '>');
                 out(['success' => true, 'message' => 'Usuario creado']);
             }
         }
@@ -1328,15 +1359,24 @@
                 )->execute([$folio, clean($body['tipo_parte'] ?? null), clean($body['fecha'] ?? null), clean($body['hora'] ?? null), clean($body['ubicacion_kilometro'] ?? null), clean($body['ubicacion_direccion'] ?? null), clean($body['ubicacion_lat'] ?? null), clean($body['ubicacion_lng'] ?? null), clean($body['google_place_id'] ?? null), $idMp, $idResp, clean($body['estado'] ?? null) ?: 'Activo', clean($body['gravedad_general'] ?? null) ?: 'Sin clasificar', (int) $user['id_usuario'], clean($body['asignado_a'] ?? null)]);
                 $id = (int) db()->lastInsertId();
                 save_details($id, $body);
+                $batch = clean($body['_activity_batch'] ?? null);
+                $activityDetail = 'Parte ' . ($folio ?: $id) . ' creado';
+                if ($batch) {
+                    $activityDetail .= ' | Lote: ' . preg_replace('/[^a-zA-Z0-9_-]/', '', $batch);
+                }
                 record_history('CREAR', $id, (int) $user['id_usuario'], 'Parte ' . $folio . ' creado desde PHP');
-                record_activity('CREACION_PARTE', (int) $user['id_usuario'], $id, 'Parte ' . $folio . ' creado');
+                record_activity('CREACION_PARTE', (int) $user['id_usuario'], $id, $activityDetail);
                 out(['success' => true, 'message' => 'Parte creado', 'id' => $id]);
             }
         }
 
         // Exportaci?n: partes.js registra que se preparo PDF o Excel.
         if ($path === '/api/partes/export' && $method === 'POST') {
+            $folios = array_values(array_unique(array_filter(array_map('clean', (array) ($body['folios'] ?? [])))));
             $exportDetail = 'Exportación ' . strtoupper((string) ($body['tipo'] ?? 'archivo')) . ' de ' . (int) ($body['total'] ?? 0) . ' parte(s)';
+            if ($folios) {
+                $exportDetail .= ' | Folios: ' . implode(', ', $folios);
+            }
             record_history('EXPORTAR', null, (int) $user['id_usuario'], $exportDetail);
             record_activity('EXPORTACION', (int) $user['id_usuario'], null, $exportDetail);
             out(['success' => true, 'message' => 'Exportación registrada']);
@@ -1432,10 +1472,15 @@
                 $stmt->execute([$type, $start, $end]);
                 $records = $stmt->fetchAll();
                 $users = [];
-                foreach ($records as $record) {
+                foreach ($records as &$record) {
                     $name = $record['usuario_nombre'] ?: 'Sistema';
                     $users[$name] = ($users[$name] ?? 0) + 1;
+                    $record['usuario'] = $name;
+                    $record['folios'] = activity_folios($record['detalle'] ?? null, $record['folio'] ?? null);
+                    $record['usuario_creado'] = activity_created_user($record['detalle'] ?? null);
+                    $record['lote'] = activity_batch($record['detalle'] ?? null);
                 }
+                unset($record);
                 $userRows = [];
                 foreach ($users as $name => $total) {
                     $userRows[] = ['nombre' => $name, 'total' => $total];

@@ -56,7 +56,7 @@ busqueda avanzada y exportaciones. Sus datos vienen de /api/partes.-->
           ><a data-page="partes" href="<?= app_url('registroPartes/partes.php') ?>"
             ><span class="nav-icon"
               ><img src="<?= app_url('img/iconos/gestion.png') ?>" alt="" /></span
-            ><span>Gestionar partes</span></a
+            ><span>Gestionar Partes</span></a
           ><a data-page="historial" href="<?= app_url('cruds/historial.php') ?>"
             ><span class="nav-icon"><img src="<?= app_url('img/iconos/historial.png') ?>" alt="" /></span
             ><span>Historial</span></a
@@ -64,7 +64,7 @@ busqueda avanzada y exportaciones. Sus datos vienen de /api/partes.-->
           <div class="side-section">Sesión</div>
           <button onclick="logout()">
             <span class="nav-icon"><img src="<?= app_url('img/iconos/salida.png') ?>" alt="" /></span
-            ><span>Cerrar sesión</span></button
+            ><span>Cerrar Sesión</span></button
           ><button class="collapse-btn" onclick="toggleSidebar()">
             <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
             ><span>Ocultar</span>
@@ -75,7 +75,7 @@ busqueda avanzada y exportaciones. Sus datos vienen de /api/partes.-->
         <header class="topbar">
           <a class="topbar-brand" href="<?= app_url('cruds/inicio.php') ?>">
             <img class="logo" src="<?= app_url('img/Logo.png') ?>" alt="FGE" />
-            <span>Sistema de partes</span>
+            <span>Sistema de Partes</span>
           </a>
           <div class="user-menu">
             <button class="user-top" type="button">
@@ -657,7 +657,7 @@ busqueda avanzada y exportaciones. Sus datos vienen de /api/partes.-->
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="<?= app_url('js/common.js') ?>?v=20260616historyphoto"></script>
-    <script src="<?= app_url('js/partes.js') ?>?v=20260619advancedmodal"></script>
+    <script src="<?= app_url('js/partes.js') ?>?v=20260622foliosbatch"></script>
     <script src="<?= app_url('vendor/jquery/jquery.min.js') ?>"></script>
     <script src="<?= app_url('vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
     <script src="<?= app_url('vendor/jquery-easing/jquery.easing.min.js') ?>"></script>

@@ -63,7 +63,7 @@
           <div class="side-section">Sesión</div>
           <button onclick="logout()">
             <span class="nav-icon"><img src="<?= app_url('img/iconos/salida.png') ?>" alt="" /></span
-            ><span>Cerrar sesión</span></button
+            ><span>Cerrar Sesión</span></button
           ><button class="collapse-btn" onclick="toggleSidebar()">
             <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
             ><span>Ocultar</span>
@@ -74,7 +74,7 @@
         <header class="topbar">
           <a class="topbar-brand" href="<?= app_url('cruds/inicio.php') ?>">
             <img class="logo" src="<?= app_url('img/Logo.png') ?>" alt="FGE" />
-            <span>Sistema de partes</span>
+            <span>Sistema de Partes </span>
           </a>
           <div class="user-menu">
             <button class="user-top" type="button">

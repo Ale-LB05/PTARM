@@ -5,7 +5,7 @@ $photo = $topUser['imagen_perfil'] : 'img/usuario.png';
 <header class="topbar barra-superior">
     <a class="topbar-brand" href="<= app_url('cruds/inicio.php') >">
         <img class="logo logo-fge" src="<= app_url('img/Logo.png') >" alt="PTARM">
-        <span>Sistema de partes</span>
+        <span>Sistema de Partes</span>
     </a>
     <div class="user-menu usuario-superior">
         <button class="user-top boton-perfil" type="button" onclick="document.querySelector('.user-dropdown').classList.toggle('show')">
@@ -15,7 +15,7 @@ $photo = $topUser['imagen_perfil'] : 'img/usuario.png';
         </button>
         <div class="user-dropdown animated--grow-in">
             <a href="<= app_url('cruds/perfil.php') >"><i class="fas fa-user"></i> Perfil</a>
-            <a href="<= app_url('registroUser/logout.php') >"><i class="fas fa-sign-out-alt"></i> Cerrar sesion</a>
+            <a href="<= app_url('registroUser/logout.php') >"><i class="fas fa-sign-out-alt"></i> Cerrar Sesion</a>
         </div>
     </div>
 </header>

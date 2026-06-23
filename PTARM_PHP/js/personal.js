@@ -1,6 +1,5 @@
 /*
- * Pantalla Personal.
- *
+ * Pantallad del Personal.
  * Lo carga cruds/personal.php. Administra usuarios, ministerios publicos y
  * catalogos relacionados. Las operaciones CRUD se envian a api/index.php.
  */
@@ -141,7 +140,7 @@ function roleLabel(role = "") {
   return String(role).trim().toLowerCase() === "consulta" ? "Auxiliar" : role || "Sin rol";
 }
 
-/** Devuelve la pagina actual de usuarios segun el tamano seleccionado. */
+/** Devuelve la pagina actual de usuarios segun el tamaño seleccionado. */
 function pagedUsers() {
   const pageSize = Number(userPageSize.value || 5);
   const totalPages = Math.max(1, Math.ceil(users.length / pageSize));

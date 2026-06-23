@@ -2595,6 +2595,55 @@ legend {
   width: 100%;
 }
 
+.stats-export-activities {
+  margin-top: 18px;
+}
+
+.stats-export-activities > strong {
+  display: block;
+  color: var(--navy);
+  font-size: 0.9rem;
+}
+
+.export-head .stats-export-activities {
+  margin: 10px 0 0;
+}
+
+.export-head .stats-export-activities .export-chart-options {
+  margin-top: 10px;
+}
+
+.stats-folio {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  border: 1px solid #bfdbfe;
+  border-radius: 5px;
+  padding: 3px 6px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.stats-folios-btn {
+  min-height: 32px;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+
+.stats-folios-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding-left: 28px;
+}
+
+.stats-folios-list li {
+  padding-left: 4px;
+  color: var(--navy);
+  font-weight: 700;
+}
+
 .muted-cell {
   color: #8a8d94;
 }

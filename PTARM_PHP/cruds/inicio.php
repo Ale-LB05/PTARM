@@ -65,7 +65,7 @@
           <div class="side-section">Sesión</div>
           <button onclick="logout()">
             <span class="nav-icon"><img src="<?= app_url('img/iconos/salida.png') ?>" alt="" /></span
-            ><span>Cerrar sesión</span>
+            ><span>Cerrar Sesión</span>
           </button>
           <button class="collapse-btn" onclick="toggleSidebar()">
             <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
@@ -77,7 +77,7 @@
         <header class="topbar">
           <a class="topbar-brand" href="<?= app_url('cruds/inicio.php') ?>">
             <img class="logo" src="<?= app_url('img/Logo.png') ?>" alt="FGE" />
-            <span>Sistema de partes</span>
+            <span>Sistema de Partes</span>
           </a>
           <div class="user-menu">
             <button class="user-top" type="button">
@@ -92,7 +92,7 @@
         <section class="page">
           <div class="hero-card">
             <div>
-              <h1>Datos generales</h1>
+              <h1>Datos Generales</h1>
               <p>
                 Un parte de tránsito es un documento oficial que se elabora
                 cuando ocurre un accidente vial o choque de tránsito. Este
@@ -107,7 +107,7 @@
             </div>
           </div>
           <div class="section-title">
-            <h2>Partes recientes</h2>
+            <h2>Partes Recientes</h2>
             <p>
               Consulta los registros recientes y accede a las funciones
               principales del sistema.
@@ -153,7 +153,7 @@
             </table>
           </div>
           <div class="section-title">
-            <h2>Menú del sistema</h2>
+            <h2>Menú del Sistema</h2>
             <p>
               Selecciona una opción para trabajar con los partes de tránsito
             </p>
@@ -162,7 +162,7 @@
             <a class="menu-card hover-lift" data-page="partes" href="<?= app_url('registroPartes/partes.php') ?>"
               ><span>01</span>
               <h3>Lista de partes</h3>
-              <p>Crear, buscar, filtrar, consultar información y editar.</p></a
+              <p>Crear, exportar, importar, eliminar, filtrar, consultar información y editar.</p></a
             >
             <a class="menu-card hover-lift" data-page="historial" href="<?= app_url('cruds/historial.php') ?>"
               ><span>02</span>

@@ -50,7 +50,9 @@ const statsExportEndMonth = document.getElementById("statsExportEndMonth");
 const statsExportEndYear = document.getElementById("statsExportEndYear");
 const statsExportBars = document.getElementById("statsExportBars");
 const statsExportPie = document.getElementById("statsExportPie");
-const statsExportTable = document.getElementById("statsExportTable");
+const statsExportActivityInputs = [...document.querySelectorAll(".stats-export-activity")];
+const statsExportActivities = document.querySelector(".stats-export-activities");
+const statsExportHeadContent = document.querySelector(".stats-export-modal .export-head > div:first-child");
 const statsExportRangeCount = document.getElementById("statsExportRangeCount");
 const statsCards = document.getElementById("statsCards");
 const statsChart = document.getElementById("statsChart");
@@ -61,7 +63,10 @@ const statsRows = document.getElementById("statsRows");
 const statsDetailModal = document.getElementById("statsDetailModal");
 const statsDetailTitle = document.getElementById("statsDetailTitle");
 const statsDetailSummary = document.getElementById("statsDetailSummary");
+const statsDetailHeader = document.getElementById("statsDetailHeader");
 const statsDetailRows = document.getElementById("statsDetailRows");
+const statsFoliosSummary = document.getElementById("statsFoliosSummary");
+const statsFoliosRows = document.getElementById("statsFoliosRows");
 
 // Matches the advanced-search action layout used in Gestionar partes.
 historyAdvancedSearchActions.classList.add("advanced-search-actions");
@@ -479,19 +484,100 @@ async function openStatsDetail(type) {
     <div class="stats-detail-card"><span>Periodo</span><strong>${statsMonthName(detail.mes)} ${detail.anio}</strong></div>
   `;
 
-  const userSummary = detail.usuarios.length
-    ? `<tr><td colspan="4"><strong>Resumen por usuario:</strong> ${detail.usuarios.map((user) => `${escapeHtml(user.nombre)}: ${user.total}`).join(" | ")}</td></tr>`
-    : "";
-  const records = detail.registros.length
-    ? detail.registros.map((row) => `<tr>
-        <td>${formatStatsDateTime(row.fecha)}</td>
-        <td>${escapeHtml(row.usuario)}${row.correo ? `<br><span class="muted-cell">${escapeHtml(row.correo)}</span>` : ""}</td>
-        <td>${escapeHtml(row.folio || "No aplica")}</td>
-        <td>${escapeHtml(row.detalle || "Sin detalle")}</td>
-      </tr>`).join("")
-    : `<tr><td colspan="4">Sin datos registrados para este periodo.</td></tr>`;
-  statsDetailRows.innerHTML = `${userSummary}${records}`;
+  const table = statsDetailTable(detail.tipo, detail.registros);
+  statsDetailHeader.innerHTML = `<tr>${table.headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>`;
+  statsDetailRows.innerHTML = table.rows;
   statsDetailModal.classList.add("show");
+}
+
+/** Builds columns suited to each activity instead of reusing a generic table. */
+function statsDetailTable(type, records, interactive = true) {
+  const visibleRecords = groupStatsPartRecords(type, records);
+  const date = (row) => formatStatsDateTime(row.fecha);
+  const user = (row) => escapeHtml(row.usuario || row.usuario_nombre || "Sistema");
+  const folios = (row) => {
+    const values = Array.isArray(row.folios) ? row.folios : extractActivityFolios(row);
+    if (!values.length) return "Sin folio";
+    if (interactive && values.length > 1) {
+      const payload = encodeURIComponent(JSON.stringify(values));
+      return `<button class="btn blue outline stats-folios-btn" type="button" onclick="openStatsFoliosModal('${payload}')">Ver folios (${values.length})</button>`;
+    }
+    if (!interactive) {
+      return values.map((folio, index) => `<strong class="export-folio-text">${index + 1}. ${escapeHtml(folio)}</strong>`).join(", ");
+    }
+    return values.map((folio) => `<span class="stats-folio">${escapeHtml(folio)}</span>`).join(" ");
+  };
+  const configs = {
+    LOGIN: {
+      headers: ["Fecha y hora", "Usuario"],
+      cells: (row) => [date(row), user(row)],
+    },
+    EXPORTACION: {
+      headers: ["Fecha y hora", "Usuario que exporto", "Folios exportados"],
+      cells: (row) => [date(row), user(row), folios(row)],
+    },
+    CREACION_PARTE: {
+      headers: ["Fecha y hora", "Usuario que creo", "Folio creado"],
+      cells: (row) => [date(row), user(row), folios(row)],
+    },
+    EDICION_PARTE: {
+      headers: ["Fecha y hora", "Usuario que edito", "Folio editado"],
+      cells: (row) => [date(row), user(row), folios(row)],
+    },
+    ELIMINACION_PARTE: {
+      headers: ["Fecha y hora", "Usuario que elimino", "Folio eliminado"],
+      cells: (row) => [date(row), user(row), folios(row)],
+    },
+    CREACION_USUARIO: {
+      headers: ["Fecha y hora", "Usuario que creo", "Usuario creado"],
+      cells: (row) => [date(row), user(row), escapeHtml(row.usuario_creado || String(row.detalle || "Sin detalle").replace(/^Usuario creado:\s*/i, ""))],
+    },
+  };
+  const config = configs[type] || {
+    headers: ["Fecha y hora", "Usuario"],
+    cells: (row) => [date(row), user(row)],
+  };
+  if (["CREACION_PARTE", "EDICION_PARTE", "ELIMINACION_PARTE"].includes(type) && visibleRecords.some((row) => (row.folios || []).length > 1)) {
+    config.headers[2] = config.headers[2].replace("Folio", "Folios");
+  }
+  return {
+    headers: config.headers,
+    rows: visibleRecords.length
+      ? visibleRecords.map((row) => `<tr>${config.cells(row).map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")
+      : `<tr><td colspan="${config.headers.length}">Sin datos registrados para este periodo.</td></tr>`,
+  };
+}
+
+/** Combines activities that were recorded as one import batch. */
+function groupStatsPartRecords(type, records) {
+  if (!["CREACION_PARTE", "EDICION_PARTE", "ELIMINACION_PARTE"].includes(type)) return records;
+  const groups = new Map();
+  records.forEach((row, index) => {
+    const key = row.lote ? `lote-${row.lote}` : `single-${index}`;
+    const current = groups.get(key) || { ...row, folios: [] };
+    const rowFolios = Array.isArray(row.folios) ? row.folios : extractActivityFolios(row);
+    current.folios = [...new Set([...current.folios, ...rowFolios])];
+    groups.set(key, current);
+  });
+  return [...groups.values()];
+}
+
+/** Opens the list of folios that belong to a single import batch. */
+function openStatsFoliosModal(encodedFolios) {
+  let folios = [];
+  try { folios = JSON.parse(decodeURIComponent(encodedFolios)); } catch (_) { folios = []; }
+  statsFoliosSummary.textContent = `${folios.length} folio${folios.length === 1 ? "" : "s"} registrado${folios.length === 1 ? "" : "s"} en este lote.`;
+  statsFoliosRows.innerHTML = folios.map((folio) => `<li><span class="stats-folio">${escapeHtml(folio)}</span></li>`).join("") || `<li>Sin folios disponibles.</li>`;
+  document.getElementById("statsFoliosModal").classList.add("show");
+}
+
+/** Reads folios from older activity details that predate the structured field. */
+function extractActivityFolios(row) {
+  if (row.folio) return [row.folio];
+  const match = String(row.detalle || "").match(/Folios:\s*(.+)$/i);
+  if (match) return match[1].split(/[|,]/).map((folio) => folio.trim()).filter(Boolean);
+  const single = String(row.detalle || "").match(/Parte\s+([^\s]+)\s+(?:creado|editado|eliminado)/i);
+  return single ? [single[1]] : [];
 }
 
 function closeStatsDetailModal() {
@@ -515,13 +601,15 @@ async function ensureStatsLoaded() {
 }
 
 function openStatsExportModal() {
+  statsExportHeadContent.innerHTML = "<strong>Actividades a exportar</strong>";
+  statsExportHeadContent.appendChild(statsExportActivities);
   statsExportStartMonth.value = statsMonth.value;
   statsExportEndMonth.value = statsMonth.value;
   statsExportStartYear.value = statsYear.value;
   statsExportEndYear.value = statsYear.value;
   statsExportBars.checked = true;
   statsExportPie.checked = true;
-  statsExportTable.checked = true;
+  statsExportActivityInputs.forEach((input) => { input.checked = true; });
   updateStatsExportRangeCount();
   document.getElementById("statsExportModal").classList.add("show");
 }
@@ -547,7 +635,6 @@ function statsExportOptions() {
   return {
     bars: statsExportBars.checked,
     pie: statsExportPie.checked,
-    table: statsExportTable.checked,
   };
 }
 
@@ -569,6 +656,7 @@ async function fetchStatsMonth(month, year) {
 async function buildStatsExportData() {
   const periods = statsExportPeriods();
   const options = statsExportOptions();
+  const activityTypes = statsExportActivityTypes();
   if (!periods.length) {
     showToast("Selecciona un rango valido para exportar", "error");
     return null;
@@ -577,8 +665,8 @@ async function buildStatsExportData() {
     showToast("El rango maximo para exportar es de 120 meses", "error");
     return null;
   }
-  if (!options.bars && !options.pie && !options.table) {
-    showToast("Selecciona al menos una grafica para exportar", "error");
+  if (!activityTypes.length) {
+    showToast("Selecciona al menos una actividad para exportar", "error");
     return null;
   }
 
@@ -587,8 +675,9 @@ async function buildStatsExportData() {
   for (const period of periods) {
     const monthData = await fetchStatsMonth(period.month, period.year);
     if (!monthData) return null;
-    months.push(monthData);
-    for (const event of monthData.eventos || []) {
+    const filteredEvents = (monthData.eventos || []).filter((event) => activityTypes.includes(event.tipo));
+    months.push({ ...monthData, eventos: filteredEvents, usuarios: [] });
+    for (const event of filteredEvents) {
       const detail = await fetchStatsDetail(event.tipo, period.month, period.year);
       if (!detail) continue;
       const current = detailsByType.get(event.tipo) || {
@@ -605,16 +694,26 @@ async function buildStatsExportData() {
     }
   }
 
+  const details = [...detailsByType.values()].map((detail) => ({
+      ...detail,
+      usuarios: [...detail.usuarios.entries()].map(([nombre, total]) => ({ nombre, total })).sort((a, b) => b.total - a.total),
+      registros: detail.registros.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
+    }));
+  const summary = aggregateStatsMonths(months);
+  const selectedUsers = new Map();
+  details.forEach((detail) => detail.usuarios.forEach((user) => {
+    selectedUsers.set(user.nombre, (selectedUsers.get(user.nombre) || 0) + user.total);
+  }));
+  summary.usuarios = [...selectedUsers.entries()]
+    .map(([nombre, total]) => ({ nombre, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10);
   return {
     months,
     periods,
     options,
-    summary: aggregateStatsMonths(months),
-    details: [...detailsByType.values()].map((detail) => ({
-      ...detail,
-      usuarios: [...detail.usuarios.entries()].map(([nombre, total]) => ({ nombre, total })).sort((a, b) => b.total - a.total),
-      registros: detail.registros.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
-    })),
+    summary,
+    details,
   };
 }
 
@@ -647,8 +746,41 @@ function aggregateStatsMonths(months) {
 async function exportStatsExcel() {
   const exportData = await buildStatsExportData();
   if (!exportData) return;
-  downloadStatsBlob(statsReportHtml(exportData, "excel"), statsExportFilename(exportData, "xls"), "application/vnd.ms-excel;charset=utf-8");
+  downloadStatsBlob(statsExcelHtml(exportData), statsExportFilename(exportData, "xls"), "application/vnd.ms-excel;charset=utf-8");
   closeModal("statsExportModal");
+}
+
+/** Builds a data-first Excel file using the same columns as Ver datos. */
+function statsExcelHtml(exportData) {
+  const title = `Estadisticas - ${statsExportPeriodLabel(exportData)}`;
+  const rows = exportData.details.flatMap((detail) => {
+    const detailRows = groupStatsPartRecords(detail.tipo, detail.registros || []);
+    return detailRows.map((row) => {
+      const folios = Array.isArray(row.folios) ? row.folios : extractActivityFolios(row);
+      const folioText = folios.map((folio, index) => `${index + 1}. ${folio}`).join(", ");
+      const createdUser = row.usuario_creado || String(row.detalle || "").replace(/^Usuario creado:\s*/i, "");
+      return `<tr>
+        <td>${escapeHtml(detail.etiqueta)}</td>
+        <td>${formatStatsDateTime(row.fecha)}</td>
+        <td>${escapeHtml(row.usuario || row.usuario_nombre || "Sistema")}</td>
+        <td><strong>${escapeHtml(folioText || "Sin folio")}</strong></td>
+        <td>${escapeHtml(detail.tipo === "CREACION_USUARIO" ? createdUser : "")}</td>
+      </tr>`;
+    });
+  }).join("");
+  return `<!doctype html><html><head><meta charset="utf-8" />
+    <style>
+      body{font-family:Arial,sans-serif;color:#111827;background:#fff}
+      h1{margin:0 0 4px;color:#06145f;font-size:22px}
+      p{margin:0 0 14px;color:#64748b}table{border-collapse:collapse;width:100%;margin:0 0 18px;table-layout:auto}
+      th{background:#123055;color:#fff;font-weight:800;text-transform:uppercase;white-space:nowrap}
+      th,td{border:1px solid #b9c0d4;padding:8px;text-align:left;vertical-align:top;white-space:normal}
+      tbody tr:nth-child(even){background:#f8fafc}td strong{color:#000;font-weight:800}
+    </style></head><body>
+    <h1>${escapeHtml(title)}</h1><p>Generado: ${escapeHtml(new Date().toLocaleString("es-MX"))}</p>
+    <table><thead><tr><th>Actividad</th><th>Fecha y hora</th><th>Usuario</th><th>Folio(s)</th><th>Usuario creado</th></tr></thead>
+    <tbody>${rows || "<tr><td colspan=\"5\">Sin datos para el periodo y actividades seleccionadas.</td></tr>"}</tbody></table>
+  </body></html>`;
 }
 
 async function exportStatsPdf() {
@@ -752,6 +884,82 @@ function statsReportHtml(exportData, mode) {
   ${mode === "pdf" ? "<script>document.title = " + JSON.stringify(title) + ";<\/script>" : ""}
 </body>
 </html>`;
+}
+
+/** Builds the final report using the same detail columns shown in the modal. */
+function statsReportHtml(exportData, mode) {
+  const { summary, details, options } = exportData;
+  const events = summary.eventos || [];
+  const users = summary.usuarios || [];
+  const title = `Estadisticas - ${statsExportPeriodLabel(exportData)}`;
+  const charts = statsExportChartImages(events, options);
+  const detailSections = details.map((detail) => statsDetailExportSection(detail)).join("");
+  return `<!doctype html>
+<html><head><meta charset="utf-8" /><title>${escapeHtml(title)}</title>
+<style>
+  @page{size:letter portrait;margin:10mm}
+  *{box-sizing:border-box} body{margin:0;color:#172033;background:#f4f7fb;font-family:Arial,sans-serif;font-size:11px}
+  .report{max-width:1100px;margin:0 auto;padding:24px}.report-head{padding:18px 20px;border:1px solid #bfd0e4;border-radius:8px;background:#fff}
+  h1{margin:0;color:#123055;font-size:23px}h2{margin:0 0 10px;color:#123055;font-size:15px}.muted{margin:7px 0 0;color:#64748b}
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}.card{border:1px solid #cbd5e1;border-radius:7px;padding:12px;background:#fff}
+  .card span{display:block;color:#64748b;font-size:10px;font-weight:700;text-transform:uppercase}.card strong{display:block;margin-top:5px;color:#123055;font-size:21px}
+  .report-section{break-inside:avoid;page-break-inside:avoid;margin:16px 0;padding:16px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}
+  .chart-image{display:block;width:100%;max-width:980px;margin:0 auto}.two-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}.two-charts .chart-image{max-width:100%}
+  table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:8px;border:1px solid #cbd5e1;text-align:left;vertical-align:top}th{color:#fff;background:#123055;font-size:10px;text-transform:uppercase}
+  tbody tr:nth-child(even){background:#f8fafc}.export-folio-text{color:#000;font-weight:800}
+  .detail-meta{margin:0;color:#64748b}@media print{body{background:#fff}.report{padding:0}.report-section{border-color:#aebdce}}
+</style></head><body><main class="report">
+  <header class="report-head"><h1>${escapeHtml(title)}</h1><p class="muted">Reporte generado con los datos almacenados del periodo seleccionado.</p></header>
+  <section class="summary">
+    <div class="card"><span>Total del periodo</span><strong>${summary.total || 0}</strong></div>
+    <div class="card"><span>Partes creados</span><strong>${statsSummaryTotal(summary, "CREACION_PARTE")}</strong></div>
+    <div class="card"><span>Inicios de sesion</span><strong>${statsSummaryTotal(summary, "LOGIN")}</strong></div>
+    <div class="card"><span>Actividad principal</span><strong>${escapeHtml(summary.actividad_principal?.etiqueta || "Sin datos")}</strong></div>
+  </section>
+  ${charts}
+  <section class="report-section"><h2>Usuarios con mas actividad</h2><table><thead><tr><th>Usuario</th><th>Total</th></tr></thead><tbody>${users.length ? users.map((user) => `<tr><td>${escapeHtml(user.nombre)}</td><td>${user.total}</td></tr>`).join("") : `<tr><td colspan="2">Sin usuarios registrados.</td></tr>`}</tbody></table></section>
+  ${detailSections || `<section class="report-section"><p>Sin datos detallados para este periodo.</p></section>`}
+</main>${mode === "pdf" ? `<script>window.document.title=${JSON.stringify(title)};<\/script>` : ""}</body></html>`;
+}
+
+function statsExportActivityTypes() {
+  return statsExportActivityInputs.filter((input) => input.checked).map((input) => input.value);
+}
+
+/** Creates printable chart images so PDF and HTML-based Excel look the same. */
+function statsExportChartImages(events, options) {
+  const images = [];
+  if (options.bars) images.push({ title: "Grafica de barras", src: statsBarChartImage(events) });
+  if (options.pie) images.push({ title: "Grafica de pastel", src: statsPieChartImage(events) });
+  if (!images.length) return "";
+  const content = images.map((chart) => `<section class="report-section"><h2>${chart.title}</h2>${chart.src ? `<img class="chart-image" src="${chart.src}" alt="${chart.title}" />` : `<p class="muted">Sin datos para graficar.</p>`}</section>`).join("");
+  return content;
+}
+
+function statsBarChartImage(events) {
+  if (!events.length) return "";
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200; canvas.height = Math.max(260, events.length * 54 + 70);
+  const ctx = canvas.getContext("2d"); const max = Math.max(...events.map((event) => event.total), 1);
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.font = "700 20px Arial"; ctx.fillStyle = "#123055"; ctx.fillText("Actividad registrada", 34, 34);
+  events.forEach((event, index) => { const y = 58 + index * 54; const width = Math.max(12, (event.total / max) * 690); ctx.font = "16px Arial"; ctx.fillStyle = "#172033"; ctx.fillText(event.etiqueta, 34, y + 20); ctx.fillStyle = "#e2e8f0"; ctx.fillRect(360, y, 700, 28); ctx.fillStyle = statsColors[index % statsColors.length]; ctx.fillRect(360, y, width, 28); ctx.fillStyle = "#172033"; ctx.font = "700 16px Arial"; ctx.fillText(`${event.total} (${event.porcentaje}%)`, 1080, y + 20); });
+  return canvas.toDataURL("image/png");
+}
+
+function statsPieChartImage(events) {
+  if (!events.length) return "";
+  const canvas = document.createElement("canvas"); canvas.width = 920; canvas.height = 430;
+  const ctx = canvas.getContext("2d"); const cx = 220; const cy = 225; const radius = 150; let start = -Math.PI / 2;
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.font = "700 20px Arial"; ctx.fillStyle = "#123055"; ctx.fillText("Distribucion por actividad", 34, 34);
+  events.forEach((event, index) => { const end = start + (event.porcentaje / 100) * Math.PI * 2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, radius, start, end); ctx.closePath(); ctx.fillStyle = statsColors[index % statsColors.length]; ctx.fill(); start = end; });
+  events.forEach((event, index) => { const y = 80 + index * 42; ctx.fillStyle = statsColors[index % statsColors.length]; ctx.fillRect(450, y - 14, 18, 18); ctx.fillStyle = "#172033"; ctx.font = "16px Arial"; ctx.fillText(`${event.etiqueta}: ${event.total} (${event.porcentaje}%)`, 480, y); });
+  return canvas.toDataURL("image/png");
+}
+
+/** Reuses the modal's per-activity table layout in PDF and Excel exports. */
+function statsDetailExportSection(detail) {
+  const table = statsDetailTable(detail.tipo, detail.registros || [], false);
+  return `<section class="report-section"><h2>${escapeHtml(detail.etiqueta)}</h2><p class="detail-meta">Total registrado: ${detail.total}. Usuarios relacionados: ${(detail.usuarios || []).length}.</p><table><thead><tr>${table.headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${table.rows}</tbody></table></section>`;
 }
 
 function statsPieSlices(events) {
@@ -882,3 +1090,5 @@ syncHistoryAdvancedInput();
 renderHistoryAdvancedFilterList();
 updateHistoryAdvancedSummary();
 loadHistory();
+
+window.openStatsFoliosModal = openStatsFoliosModal;
