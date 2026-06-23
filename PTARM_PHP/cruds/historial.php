@@ -285,13 +285,25 @@
                 <tr>
                   <th>Fecha</th>
                   <th>Usuario</th>
-                  <th>Folio</th>
+                  <th id="statsDetailFolioHeader">Folio</th>
                   <th>Detalle</th>
                 </tr>
               </thead>
               <tbody id="statsDetailRows"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+    <div id="exportedPartsModal" class="modal-backdrop">
+      <div class="modal stats-detail-modal">
+        <div class="modal-title">
+          <h2 id="exportedPartsModalTitle">Partes exportados</h2>
+          <button class="modal-close" onclick="closeModal('exportedPartsModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <p id="exportedPartsModalSummary"></p>
+          <ul id="exportedPartsModalList"></ul>
         </div>
       </div>
     </div>
@@ -306,8 +318,8 @@
         <div class="modal-body">
           <div class="export-head">
             <div>
-              <strong>Configura el reporte</strong>
-              <p>Selecciona desde un mes específico hasta un rango de varios años y elige qué gráficas incluir.</p>
+              <strong>Actividades a incluir</strong>
+              <div class="export-chart-options" id="statsExportActivityOptions"></div>
             </div>
             <div class="export-count" id="statsExportRangeCount">1 mes</div>
           </div>

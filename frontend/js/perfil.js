@@ -15,7 +15,17 @@ const openEmailModal = document.getElementById("openEmailModal");
 const openCurpModal = document.getElementById("openCurpModal");
 const openPasswordModal = document.getElementById("openPasswordModal");
 const themeToggleBtn = document.getElementById("themeToggleBtn");
+const profileEditNotice = document.getElementById("profileEditNotice");
 const defaultPhoto = "/img/usuario.png";
+
+function updateProfileEditability() {
+  const canEdit = normalizedRole() === "administrador";
+  [openEmailModal, openCurpModal, openPasswordModal].forEach((button) => {
+    button.hidden = !canEdit;
+    button.disabled = !canEdit;
+  });
+  profileEditNotice.hidden = canEdit;
+}
 
 /** Carga la información del perfil y los partes relacionados con el usuario. */
 async function loadProfile() {
@@ -33,6 +43,7 @@ async function loadProfile() {
   emailForm.correo.value = user.correo || "";
   curpForm.curp.value = user.curp || "";
   photo.src = user.imagen_perfil || defaultPhoto;
+  updateProfileEditability();
   updateStoredUser({
     nombre: user.nombre || "",
     correo: user.correo || "",
@@ -147,7 +158,7 @@ function updateStoredUser(changes) {
   };
   localStorage.setItem("usuario", JSON.stringify(updated));
   document.querySelectorAll("[data-user-name]").forEach((el) => {
-    el.textContent = `${updated.nombre || "Usuario"} - ${updated.cargo || updated.rol || "Cargo"}`;
+    el.textContent = `${updated.nombre || "Usuario"} - ${updated.rol || updated.cargo || "Rol"}`;
   });
   document.querySelectorAll("[data-user-photo]").forEach((img) => {
     img.src = updated.foto || defaultPhoto;
@@ -164,4 +175,5 @@ function formatDate(value) {
 }
 
 syncThemeButton();
+updateProfileEditability();
 loadProfile();

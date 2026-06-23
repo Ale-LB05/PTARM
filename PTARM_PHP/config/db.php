@@ -183,15 +183,45 @@ function require_role($roles): void
 }
 
 // Guarda eventos generales para el historial/estadisticas sin bloquear la accion.
-function record_activity(string $type, ?int $userId = null, ?int $partId = null, string $detail = ''): void
+function ensure_exported_parts_table(): void
+{
+    db()->exec(
+        'CREATE TABLE IF NOT EXISTS actividad_exportaciones_partes (
+          id_actividad bigint(20) NOT NULL,
+          id_parte bigint(20) NOT NULL,
+          folio varchar(100) DEFAULT NULL,
+          PRIMARY KEY (id_actividad, id_parte),
+          KEY idx_exportacion_parte (id_parte)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+}
+
+function record_activity(string $type, ?int $userId = null, ?int $partId = null, string $detail = ''): ?int
 {
     try {
         $stmt = db()->prepare(
             'INSERT INTO actividad_sistema (tipo_evento, id_usuario, id_parte, detalle) VALUES (?, ?, ?, ?)'
         );
         $stmt->execute([$type, $userId, $partId, $detail ?: null]);
+        return (int) db()->lastInsertId();
     } catch (Throwable $error) {
-        // El historial no debe romper la operacion principal.
+      // El historial no debe romper la operacion principal.
+        return null;
+    }
+}
+
+function record_exported_parts(?int $activityId, array $partIds): void
+{
+    if (!$activityId) return;
+    $ids = array_values(array_unique(array_filter(array_map('intval', $partIds))));
+    if (!$ids) return;
+    ensure_exported_parts_table();
+    $marks = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = db()->prepare("SELECT id_parte, folio FROM partes WHERE id_parte IN ($marks)");
+    $stmt->execute($ids);
+    $insert = db()->prepare('INSERT IGNORE INTO actividad_exportaciones_partes (id_actividad, id_parte, folio) VALUES (?, ?, ?)');
+    foreach ($stmt->fetchAll() as $part) {
+        $insert->execute([$activityId, (int) $part['id_parte'], $part['folio']]);
     }
 }
 

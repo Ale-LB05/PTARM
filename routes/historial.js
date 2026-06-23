@@ -1,7 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const { requireRole } = require("../middleware/auth");
-const { ensureActivityTable } = require("../utils/activity");
+const { ensureActivityTable, ensureExportedPartsTable } = require("../utils/activity");
 
 const router = express.Router();
 router.use(requireRole("Administrador", "Capturista", "Auxiliar"));
@@ -44,7 +44,7 @@ async function ensureNotificationSeenTable() {
   notificationSeenTableReady = true;
 }
 
-// Notificaciones para partes creados por el usuario actual que otros editaron o eliminaron.
+// Notificaciones para partes creados o asignados al usuario actual que otros editaron o eliminaron.
 router.get("/notificaciones", async (req, res) => {
   try {
     await ensureNotificationSeenTable();
@@ -64,7 +64,7 @@ router.get("/notificaciones", async (req, res) => {
        LEFT JOIN usuarios u ON u.id_usuario = h.id_usuario
        WHERE h.accion IN ('EDITAR', 'ELIMINAR')
          AND h.id_usuario <> ?
-         AND (p.creado_por = ? OR h.descripcion LIKE ?)
+         AND (p.creado_por = ? OR p.asignado_a = ? OR h.descripcion LIKE ?)
          AND NOT EXISTS (
            SELECT 1
            FROM notificaciones_vistas nv
@@ -73,10 +73,10 @@ router.get("/notificaciones", async (req, res) => {
          )
        ORDER BY h.fecha DESC, h.id_historial DESC
        LIMIT 2`,
-      [req.user.id, req.user.id, creatorMarker, req.user.id],
+      [req.user.id, req.user.id, req.user.id, creatorMarker, req.user.id],
     );
 
-    if (rows.length) {
+    if (req.query.marcar === "1" && rows.length) {
       const seenRows = rows.map((row) => [req.user.id, row.id_historial]);
       await db.query("INSERT IGNORE INTO notificaciones_vistas (id_usuario, id_historial) VALUES ?", [seenRows]);
     }
@@ -145,6 +145,7 @@ router.get("/estadisticas", async (req, res) => {
 // Devuelve registros detallados del mes para un tipo de estadistica.
 router.get("/estadisticas/detalle", async (req, res) => {
   await ensureActivityTable();
+  await ensureExportedPartsTable();
   const type = String(req.query.tipo || "").trim().toUpperCase();
   if (!Object.prototype.hasOwnProperty.call(activityLabels, type)) {
     return res.status(400).json({ success: false, error: "Tipo de estadistica invalido" });
@@ -159,11 +160,14 @@ router.get("/estadisticas/detalle", async (req, res) => {
        u.nombre AS usuario_nombre,
        u.correo AS usuario_correo,
        p.folio,
+       GROUP_CONCAT(eep.folio ORDER BY eep.folio SEPARATOR '|') AS folios_exportados,
        p.fecha AS parte_fecha
      FROM actividad_sistema a
      LEFT JOIN usuarios u ON u.id_usuario = a.id_usuario
      LEFT JOIN partes p ON p.id_parte = a.id_parte
+     LEFT JOIN actividad_exportaciones_partes eep ON eep.id_actividad = a.id_actividad
      WHERE a.tipo_evento = ? AND a.fecha >= ? AND a.fecha < ?
+     GROUP BY a.id_actividad, a.tipo_evento, a.detalle, a.fecha, u.nombre, u.correo, p.folio, p.fecha
      ORDER BY a.fecha DESC, a.id_actividad DESC`,
     [type, start, end],
   );
@@ -191,6 +195,7 @@ router.get("/estadisticas/detalle", async (req, res) => {
         correo: row.usuario_correo || "",
         folio: row.folio || "",
         parte_fecha: row.parte_fecha,
+        folios: row.folios_exportados ? row.folios_exportados.split("|") : [],
         detalle: row.detalle || "",
         fecha: row.fecha,
       })),

@@ -10,6 +10,39 @@ const homePageInfo = document.getElementById("homePageInfo");
 let homePartes = [];
 let homePage = 1;
 
+/** Ajusta las explicaciones del menú a las acciones disponibles para el rol actual. */
+function updateHomeMenuForRole() {
+  const role = normalizedRole();
+  const contentByRole = {
+    administrador: {
+      intro: "Administra registros, actividad del sistema, reportes y personal autorizado.",
+      partes: ["Gestión integral de partes", "Crea, edita, consulta, filtra y exporta partes de tránsito."],
+      historial: ["Historial y estadísticas", "Supervisa actividad, consulta estadísticas y exporta reportes configurables."],
+      perfil: ["Mi perfil", "Actualiza tus datos, foto de perfil y revisa los partes a tu cargo."],
+      personal: ["Administración de personal", "Gestiona usuarios, roles, ministerios públicos y respondientes."],
+    },
+    capturista: {
+      intro: "Registra y administra partes de tránsito; consulta actividad y genera reportes.",
+      partes: ["Registro y gestión de partes", "Crea, edita, consulta, filtra y exporta los partes asignados a tu operación."],
+      historial: ["Historial y estadísticas", "Consulta la actividad del sistema y genera reportes por periodo y actividad."],
+      perfil: ["Mi perfil", "Actualiza tus datos, foto de perfil y revisa tus partes asignados."],
+    },
+    auxiliar: {
+      intro: "Consulta los registros disponibles, su actividad y los reportes autorizados.",
+      partes: ["Consulta de partes", "Busca, filtra, consulta y exporta los partes disponibles para tu rol."],
+      historial: ["Historial y estadísticas", "Consulta actividad, estadísticas y reportes autorizados."],
+      perfil: ["Mi perfil", "Consulta y actualiza tus datos de cuenta, foto y partes asignados."],
+    },
+  };
+  const content = contentByRole[role] || contentByRole.auxiliar;
+  document.getElementById("systemMenuIntro").textContent = content.intro;
+  document.querySelectorAll(".menu-card[data-page]").forEach((card) => {
+    const [title, description] = content[card.dataset.page] || [];
+    if (title) card.querySelector("[data-menu-title]").textContent = title;
+    if (description) card.querySelector("[data-menu-description]").textContent = description;
+  });
+}
+
 /** Carga los partes que se muestran en el inicio aplicando el buscador. */
 async function loadHome() {
   const data = await api(`/api/partes?q=${encodeURIComponent(homeSearch.value || "")}`);
@@ -64,3 +97,4 @@ homeNextPage.addEventListener("click", () => {
   renderHomePage();
 });
 loadHome();
+updateHomeMenuForRole();

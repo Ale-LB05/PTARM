@@ -15,6 +15,7 @@ let historyRawItems = [];
 let historyPage = 1;
 let historyAdvancedFilters = [];
 let statsData = null;
+let exportedPartsByActivity = new Map();
 
 const historyRows = document.getElementById("historyRows");
 const historyTools = document.getElementById("historyTools");
@@ -50,6 +51,7 @@ const statsExportEndYear = document.getElementById("statsExportEndYear");
 const statsExportBars = document.getElementById("statsExportBars");
 const statsExportPie = document.getElementById("statsExportPie");
 const statsExportTable = document.getElementById("statsExportTable");
+const statsExportActivityOptions = document.getElementById("statsExportActivityOptions");
 const statsExportRangeCount = document.getElementById("statsExportRangeCount");
 const statsCards = document.getElementById("statsCards");
 const statsChart = document.getElementById("statsChart");
@@ -61,6 +63,10 @@ const statsDetailModal = document.getElementById("statsDetailModal");
 const statsDetailTitle = document.getElementById("statsDetailTitle");
 const statsDetailSummary = document.getElementById("statsDetailSummary");
 const statsDetailRows = document.getElementById("statsDetailRows");
+const exportedPartsModal = document.getElementById("exportedPartsModal");
+const exportedPartsModalTitle = document.getElementById("exportedPartsModalTitle");
+const exportedPartsModalSummary = document.getElementById("exportedPartsModalSummary");
+const exportedPartsModalList = document.getElementById("exportedPartsModalList");
 
 const statsColors = ["#2563eb", "#0f766e", "#7c3aed", "#b7791f", "#dc2626", "#1499d3"];
 
@@ -433,6 +439,45 @@ function renderStatsPie(events) {
     : `<p class="empty-state">Sin datos para graficar.</p>`;
 }
 
+async function openStatsDetail(type) {
+  const detail = await fetchStatsDetail(type);
+  if (!detail) return;
+  const isLoginDetail = type === "LOGIN" || detail.tipo === "LOGIN";
+  const isExportDetail = type === "EXPORTACION" || detail.tipo === "EXPORTACION";
+  const isCreationDetail = type === "CREACION_PARTE" || detail.tipo === "CREACION_PARTE";
+  const isDeletedPartDetail = type === "ELIMINACION_PARTE" || detail.tipo === "ELIMINACION_PARTE";
+  const isUserCreationDetail = type === "CREACION_USUARIO" || detail.tipo === "CREACION_USUARIO";
+  const hideFolioColumn = isLoginDetail || isExportDetail || isCreationDetail || isDeletedPartDetail || isUserCreationDetail;
+
+  document.getElementById("statsDetailFolioHeader").hidden = hideFolioColumn;
+  exportedPartsByActivity = new Map(detail.registros.map((row) => [row.id_actividad || row.id, row.folios || []]));
+
+  statsDetailTitle.textContent = `${detail.etiqueta} - ${statsMonthName(detail.mes)} ${detail.anio}`;
+  statsDetailSummary.innerHTML = `
+    <div class="stats-detail-card"><span>Total registrado</span><strong>${detail.total}</strong></div>
+    <div class="stats-detail-card"><span>Usuarios relacionados</span><strong>${detail.usuarios.length}</strong></div>
+    <div class="stats-detail-card"><span>Periodo</span><strong>${statsMonthName(detail.mes)} ${detail.anio}</strong></div>
+  `;
+
+  const userSummary = detail.usuarios.length
+    ? `<tr><td colspan="${hideFolioColumn ? 3 : 4}"><strong>Resumen por usuario:</strong> ${detail.usuarios.map((user) => `${escapeHtml(user.nombre)}: ${user.total}`).join(" | ")}</td></tr>`
+    : "";
+  const records = detail.registros.length
+    ? detail.registros.map((row) => `<tr>
+        <td>${formatStatsDateTime(row.fecha)}</td>
+        <td>${escapeHtml(row.usuario)}${row.correo ? `<br><span class="muted-cell">${escapeHtml(row.correo)}</span>` : ""}</td>
+        ${hideFolioColumn ? "" : `<td>${escapeHtml(row.folio || "No aplica")}</td>`}
+        <td>${escapeHtml(row.detalle || "Sin detalle")}${isExportDetail ? exportedPartsDetailControl(row) : ""}</td>
+      </tr>`).join("")
+    : `<tr><td colspan="${hideFolioColumn ? 3 : 4}">Sin datos registrados para este periodo.</td></tr>`;
+  statsDetailRows.innerHTML = `${userSummary}${records}`;
+  statsDetailModal.classList.add("show");
+}
+
+function closeStatsDetailModal() {
+  statsDetailModal.classList.remove("show");
+}
+
 function renderStatsTableOnly(events) {
   statsChartTitle.textContent = "Tabla de actividad";
   statsChart.innerHTML = `
@@ -450,42 +495,29 @@ function statsTableRow(event) {
     <td>${escapeHtml(event.etiqueta)}</td>
     <td>${event.total}</td>
     <td>${event.porcentaje}%</td>
-    <td>
-      <button class="btn blue outline icon-text" type="button" onclick="openStatsDetail('${escapeHtml(event.tipo)}')">
-        <i class="fas fa-eye"></i> Ver datos
-      </button>
-    </td>
+    <td><button class="btn blue outline icon-text" type="button" onclick="openStatsDetail('${escapeHtml(event.tipo)}')"><i class="fas fa-eye"></i> Ver datos</button></td>
   </tr>`;
 }
 
-async function openStatsDetail(type) {
-  const detail = await fetchStatsDetail(type);
-  if (!detail) return;
-
-  statsDetailTitle.textContent = `${detail.etiqueta} - ${statsMonthName(detail.mes)} ${detail.anio}`;
-  statsDetailSummary.innerHTML = `
-    <div class="stats-detail-card"><span>Total registrado</span><strong>${detail.total}</strong></div>
-    <div class="stats-detail-card"><span>Usuarios relacionados</span><strong>${detail.usuarios.length}</strong></div>
-    <div class="stats-detail-card"><span>Periodo</span><strong>${statsMonthName(detail.mes)} ${detail.anio}</strong></div>
-  `;
-
-  const userSummary = detail.usuarios.length
-    ? `<tr><td colspan="4"><strong>Resumen por usuario:</strong> ${detail.usuarios.map((user) => `${escapeHtml(user.nombre)}: ${user.total}`).join(" | ")}</td></tr>`
-    : "";
-  const records = detail.registros.length
-    ? detail.registros.map((row) => `<tr>
-        <td>${formatStatsDateTime(row.fecha)}</td>
-        <td>${escapeHtml(row.usuario)}${row.correo ? `<br><span class="muted-cell">${escapeHtml(row.correo)}</span>` : ""}</td>
-        <td>${escapeHtml(row.folio || "No aplica")}</td>
-        <td>${escapeHtml(row.detalle || "Sin detalle")}</td>
-      </tr>`).join("")
-    : `<tr><td colspan="4">Sin datos registrados para este periodo.</td></tr>`;
-  statsDetailRows.innerHTML = `${userSummary}${records}`;
-  statsDetailModal.classList.add("show");
+function exportedPartsDetailControl(row) {
+  const folios = row.folios || [];
+  if (folios.length === 1) {
+    return `<br><span class="muted-cell">Parte exportada: <strong>${escapeHtml(folios[0])}</strong></span>`;
+  }
+  if (folios.length > 1) {
+    return `<br><button class="btn blue outline icon-text" type="button" onclick="openExportedPartsModal(${Number(row.id_actividad || row.id)})"><i class="fas fa-list"></i> Ver partes exportados</button>`;
+  }
+  return "";
 }
 
-function closeStatsDetailModal() {
-  statsDetailModal.classList.remove("show");
+function openExportedPartsModal(activityId) {
+  const folios = exportedPartsByActivity.get(Number(activityId)) || [];
+  exportedPartsModalTitle.textContent = "Partes exportados";
+  exportedPartsModalSummary.textContent = folios.length
+    ? `${folios.length} parte${folios.length === 1 ? "" : "s"} exportado${folios.length === 1 ? "" : "s"}`
+    : "La lista no esta disponible para esta exportacion anterior.";
+  exportedPartsModalList.innerHTML = folios.length ? folios.map((folio) => `<li>${escapeHtml(folio)}</li>`).join("") : "";
+  exportedPartsModal.classList.add("show");
 }
 
 async function fetchStatsDetail(type, month = statsMonth.value, year = statsYear.value) {
@@ -504,7 +536,8 @@ async function ensureStatsLoaded() {
   return Boolean(statsData);
 }
 
-function openStatsExportModal() {
+async function openStatsExportModal() {
+  await ensureStatsLoaded();
   statsExportStartMonth.value = statsMonth.value;
   statsExportEndMonth.value = statsMonth.value;
   statsExportStartYear.value = statsYear.value;
@@ -512,6 +545,7 @@ function openStatsExportModal() {
   statsExportBars.checked = true;
   statsExportPie.checked = true;
   statsExportTable.checked = true;
+  renderStatsExportActivityOptions();
   updateStatsExportRangeCount();
   document.getElementById("statsExportModal").classList.add("show");
 }
@@ -538,7 +572,15 @@ function statsExportOptions() {
     bars: statsExportBars.checked,
     pie: statsExportPie.checked,
     table: statsExportTable.checked,
+    activityTypes: [...statsExportActivityOptions.querySelectorAll(".stats-export-activity:checked")].map((input) => input.value),
   };
+}
+
+function renderStatsExportActivityOptions() {
+  const events = statsData?.eventos || [];
+  statsExportActivityOptions.innerHTML = events.length
+    ? events.map((event) => `<label class="inline-check"><input class="stats-export-activity" type="checkbox" value="${escapeHtml(event.tipo)}" checked /> ${escapeHtml(event.etiqueta)}</label>`).join("")
+    : `<span class="muted-cell">No hay actividades disponibles.</span>`;
 }
 
 function updateStatsExportRangeCount() {
@@ -571,6 +613,10 @@ async function buildStatsExportData() {
     showToast("Selecciona al menos una grafica para exportar", "error");
     return null;
   }
+  if (!options.activityTypes.length) {
+    showToast("Selecciona al menos una actividad para exportar", "error");
+    return null;
+  }
 
   const months = [];
   const detailsByType = new Map();
@@ -595,16 +641,35 @@ async function buildStatsExportData() {
     }
   }
 
+  const details = [...detailsByType.values()].map((detail) => ({
+    ...detail,
+    usuarios: [...detail.usuarios.entries()].map(([nombre, total]) => ({ nombre, total })).sort((a, b) => b.total - a.total),
+    registros: detail.registros.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
+  })).filter((detail) => options.activityTypes.includes(detail.tipo));
+  const total = details.reduce((sum, detail) => sum + detail.total, 0);
+  const usuarios = new Map();
+  details.forEach((detail) => detail.usuarios.forEach((user) => usuarios.set(user.nombre, (usuarios.get(user.nombre) || 0) + user.total)));
+  const eventos = details.map((detail) => ({
+    tipo: detail.tipo,
+    etiqueta: detail.etiqueta,
+    total: detail.total,
+    porcentaje: total ? Number(((detail.total / total) * 100).toFixed(1)) : 0,
+  })).sort((a, b) => b.total - a.total || a.etiqueta.localeCompare(b.etiqueta));
+
   return {
-    months,
+    months: months.map((month) => ({
+      ...month,
+      eventos: (month.eventos || []).filter((event) => options.activityTypes.includes(event.tipo)),
+    })),
     periods,
     options,
-    summary: aggregateStatsMonths(months),
-    details: [...detailsByType.values()].map((detail) => ({
-      ...detail,
-      usuarios: [...detail.usuarios.entries()].map(([nombre, total]) => ({ nombre, total })).sort((a, b) => b.total - a.total),
-      registros: detail.registros.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
-    })),
+    summary: {
+      total,
+      eventos,
+      usuarios: [...usuarios.entries()].map(([nombre, total]) => ({ nombre, total })).sort((a, b) => b.total - a.total).slice(0, 10),
+      actividad_principal: eventos[0] || null,
+    },
+    details,
   };
 }
 
@@ -658,6 +723,10 @@ async function exportStatsPdf() {
   setTimeout(() => reportWindow.print(), 300);
 }
 
+function statsDetailShowsFolio(detail) {
+  return detail.tipo === "EDICION_PARTE";
+}
+
 function statsReportHtml(exportData, mode) {
   const { summary, details, options } = exportData;
   const events = summary.eventos || [];
@@ -671,7 +740,9 @@ function statsReportHtml(exportData, mode) {
       <td>${event.porcentaje}%</td>
     </tr>
   `).join("");
-  const detailSections = details.map((detail) => `
+  const detailSections = details.map((detail) => {
+    const showFolio = statsDetailShowsFolio(detail);
+    return `
     <h2>${escapeHtml(detail.etiqueta)}</h2>
     <p>Total: ${detail.total}. Usuarios relacionados: ${detail.usuarios.length}.</p>
     <table>
@@ -679,10 +750,11 @@ function statsReportHtml(exportData, mode) {
       <tbody>${detail.usuarios.length ? detail.usuarios.map((user) => `<tr><td>${escapeHtml(user.nombre)}</td><td>${user.total}</td></tr>`).join("") : `<tr><td colspan="2">Sin usuarios registrados.</td></tr>`}</tbody>
     </table>
     <table>
-      <thead><tr><th>Fecha</th><th>Usuario</th><th>Correo</th><th>Folio</th><th>Detalle</th></tr></thead>
-      <tbody>${detail.registros.length ? detail.registros.map((row) => `<tr><td>${formatStatsDateTime(row.fecha)}</td><td>${escapeHtml(row.usuario)}</td><td>${escapeHtml(row.correo || "")}</td><td>${escapeHtml(row.folio || "No aplica")}</td><td>${escapeHtml(row.detalle || "Sin detalle")}</td></tr>`).join("") : `<tr><td colspan="5">Sin registros.</td></tr>`}</tbody>
+      <thead><tr><th>Fecha</th><th>Usuario</th><th>Correo</th>${showFolio ? "<th>Folio</th>" : ""}<th>Detalle</th></tr></thead>
+      <tbody>${detail.registros.length ? detail.registros.map((row) => `<tr><td>${formatStatsDateTime(row.fecha)}</td><td>${escapeHtml(row.usuario)}</td><td>${escapeHtml(row.correo || "")}</td>${showFolio ? `<td>${escapeHtml(row.folio || "")}</td>` : ""}<td>${escapeHtml(row.detalle || "Sin detalle")}</td></tr>`).join("") : `<tr><td colspan="${showFolio ? 5 : 4}">Sin registros.</td></tr>`}</tbody>
     </table>
-  `).join("");
+  `;
+  }).join("");
 
   return `<!doctype html>
 <html>

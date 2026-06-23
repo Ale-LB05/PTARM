@@ -59,7 +59,7 @@ function setupLayout(active) {
   const user = getUser();
   const userPhoto = user.foto || user.imagen_perfil || "/img/usuario.png";
   document.querySelectorAll("[data-user-name]").forEach((el) => {
-    el.textContent = `${user.nombre || "Usuario"} - ${user.cargo || user.rol || "Cargo"}`;
+    el.textContent = `${user.nombre || "Usuario"} - ${user.rol || user.cargo || "Rol"}`;
   });
   document.querySelectorAll("[data-user-photo]").forEach((img) => {
     img.src = userPhoto;
@@ -87,6 +87,11 @@ function applyTheme() {
   const isDark = localStorage.getItem("theme") === "dark";
   document.documentElement.dataset.theme = isDark ? "dark" : "light";
   document.documentElement.classList.toggle("theme-dark", isDark);
+  document.querySelectorAll(".topbar-brand .logo").forEach((logo) => {
+    const lightLogo = logo.dataset.logoLight || logo.getAttribute("src") || "/img/Logo.png";
+    logo.dataset.logoLight = lightLogo;
+    logo.src = isDark ? (logo.dataset.logoDark || "/img/logot.png") : lightLogo;
+  });
 }
 
 /** Alterna entre modo claro y modo oscuro y devuelve el tema activo. */
@@ -111,6 +116,7 @@ function setupUserMenu() {
     trigger.setAttribute("aria-expanded", "false");
     bell?.classList.add("notification-trigger");
     bell?.setAttribute("title", "Notificaciones");
+    loadNotificationIndicator(bell);
 
     trigger.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -159,6 +165,18 @@ function ensureNotificationPanel(menu) {
   return panel;
 }
 
+function setNotificationIndicator(bell, hasNotifications) {
+  if (!bell) return;
+  bell.classList.toggle("has-notifications", hasNotifications);
+  bell.setAttribute("aria-label", hasNotifications ? "Notificaciones pendientes" : "Sin notificaciones pendientes");
+}
+
+/** Consulta pendientes sin marcarlos como vistos para resaltar la campana. */
+async function loadNotificationIndicator(bell) {
+  const data = await api("/api/historial/notificaciones");
+  if (data?.success) setNotificationIndicator(bell, data.data.length > 0);
+}
+
 /** Carga actividades relevantes para partes creados por el usuario actual. */
 async function loadNotifications(panel) {
   const list = panel.querySelector("[data-notification-list]");
@@ -168,7 +186,7 @@ async function loadNotifications(panel) {
       <div><strong>Cargando...</strong><p>Buscando actividad reciente.</p></div>
     </div>
   `;
-  const data = await api("/api/historial/notificaciones");
+  const data = await api("/api/historial/notificaciones?marcar=1");
   if (!data?.success) {
     list.innerHTML = `
       <div class="notification-item">
@@ -178,6 +196,8 @@ async function loadNotifications(panel) {
     `;
     return;
   }
+
+  setNotificationIndicator(panel.closest(".user-menu")?.querySelector(".notification-trigger"), false);
 
   if (!data.data.length) {
     list.innerHTML = `

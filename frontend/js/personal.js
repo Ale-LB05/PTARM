@@ -157,7 +157,7 @@ function openUserModal(mode, id = null) {
   editingUser = id;
   const user = users.find((item) => item.id_usuario === id);
   document.getElementById("userModalTitle").textContent = mode === "edit" ? "Editar Empleado" : mode === "view" ? "Visualizar Empleado" : "Nuevo Empleado";
-  document.getElementById("userSubmit").textContent = mode === "edit" ? "Guardar" : "Crear nuevo";
+  document.getElementById("userSubmit").textContent = mode === "edit" ? "Guardar" : "Crear Nuevo";
   document.getElementById("userSubmit").style.display = mode === "view" ? "none" : "";
   [...form.elements].forEach((el) => {
     if (el.name) el.disabled = mode === "view";
