@@ -33,7 +33,7 @@
     <title>Historial | PTARM</title>
     <link rel="icon" type="image/png" href="<?= app_url('img/logot.png') ?>" />
     <link href="<?= app_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" />
-    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260616historyphoto" />
+    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260622activitydetails" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
@@ -63,7 +63,7 @@
           <div class="side-section">Sesión</div>
           <button onclick="logout()">
             <span class="nav-icon"><img src="<?= app_url('img/iconos/salida.png') ?>" alt="" /></span
-            ><span>Cerrar sesión</span></button
+            ><span>Cerrar Sesión</span></button
           ><button class="collapse-btn" onclick="toggleSidebar()">
             <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
             ><span>Ocultar</span>
@@ -74,7 +74,7 @@
         <header class="topbar">
           <a class="topbar-brand" href="<?= app_url('cruds/inicio.php') ?>">
             <img class="logo" src="<?= app_url('img/Logo.png') ?>" alt="FGE" />
-            <span>Sistema de partes</span>
+            <span>Sistema de Partes</span>
           </a>
           <div class="user-menu">
             <button class="user-top" type="button">
@@ -135,9 +135,14 @@
               ><label
                 >Vista
                 <select id="statsView">
+<<<<<<< HEAD
                   <option value="bars">Barras</option>
                   <option value="pie">Pastel</option>
                   <option value="table">Tabla</option>
+=======
+                  <option value="bars">Barras</option>
+                  <option value="pie">Pastel</option>
+>>>>>>> 6d7348ee79133054348f757275f51af466273a58
                 </select></label
               ><button class="btn blue" id="refreshStatsBtn" type="button">
                 <i class="fas fa-sync-alt"></i> Actualizar
@@ -268,6 +273,7 @@
           </div>
         </form>
       </div>
+      <P>hi mi friend , god morning bitch</P>
     </div>
     <div id="statsDetailModal" class="modal-backdrop">
       <div class="modal stats-detail-modal">
@@ -281,12 +287,17 @@
           <div class="stats-detail-summary" id="statsDetailSummary"></div>
           <div class="table-wrap stats-detail-table">
             <table>
-              <thead>
+              <thead id="statsDetailHeader">
                 <tr>
+<<<<<<< HEAD
                   <th>Fecha</th>
                   <th>Usuario</th>
                   <th id="statsDetailFolioHeader">Folio</th>
                   <th>Detalle</th>
+=======
+                  <th>Fecha</th>
+                  <th>Usuario</th>
+>>>>>>> 6d7348ee79133054348f757275f51af466273a58
                 </tr>
               </thead>
               <tbody id="statsDetailRows"></tbody>
@@ -294,6 +305,7 @@
           </div>
         </div>
       </div>
+<<<<<<< HEAD
     </div>
     <div id="exportedPartsModal" class="modal-backdrop">
       <div class="modal stats-detail-modal">
@@ -307,6 +319,21 @@
         </div>
       </div>
     </div>
+=======
+    </div>
+    <div id="statsFoliosModal" class="modal-backdrop">
+      <div class="modal small">
+        <div class="modal-title">
+          <h2>Folios del lote</h2>
+          <button class="modal-close" onclick="closeModal('statsFoliosModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <p class="muted-cell" id="statsFoliosSummary"></p>
+          <ol class="stats-folios-list" id="statsFoliosRows"></ol>
+        </div>
+      </div>
+    </div>
+>>>>>>> 6d7348ee79133054348f757275f51af466273a58
     <div id="statsExportModal" class="modal-backdrop">
       <div class="modal export stats-export-modal">
         <div class="modal-title">
@@ -363,9 +390,26 @@
             >
           </div>
           <div class="export-chart-options">
+<<<<<<< HEAD
             <label class="inline-check"><input id="statsExportBars" type="checkbox" checked /> Barras</label>
             <label class="inline-check"><input id="statsExportPie" type="checkbox" checked /> Pastel</label>
             <label class="inline-check"><input id="statsExportTable" type="checkbox" checked /> Tabla</label>
+=======
+            <strong>Graficas a Exportar</strong>
+            <label class="inline-check"><input id="statsExportBars" type="checkbox" checked /> Barras</label>
+            <label class="inline-check"><input id="statsExportPie" type="checkbox" checked /> Pastel</label>
+          </div>
+          <div class="stats-export-activities">
+            <strong>Actividades a Exportar</strong>
+            <div class="export-chart-options">
+              <label class="inline-check"><input class="stats-export-activity" type="checkbox" value="LOGIN" checked /> Login</label>
+              <label class="inline-check"><input class="stats-export-activity" type="checkbox" value="EXPORTACION" checked /> Exportacion</label>
+              <label class="inline-check"><input class="stats-export-activity" type="checkbox" value="CREACION_PARTE" checked /> Creacion de parte</label>
+              <label class="inline-check"><input class="stats-export-activity" type="checkbox" value="EDICION_PARTE" checked /> Edicion de parte</label>
+              <label class="inline-check"><input class="stats-export-activity" type="checkbox" value="ELIMINACION_PARTE" checked /> Eliminacion de parte</label>
+              <label class="inline-check"><input class="stats-export-activity" type="checkbox" value="CREACION_USUARIO" checked /> Creacion de usuario</label>
+            </div>
+>>>>>>> 6d7348ee79133054348f757275f51af466273a58
           </div>
           <div class="modal-actions">
             <button class="btn red outline" type="button" onclick="closeModal('statsExportModal')">Cancelar</button
@@ -392,7 +436,7 @@
       </div>
     </div>
     <script src="<?= app_url('js/common.js') ?>?v=20260616historyphoto"></script>
-    <script src="<?= app_url('js/historial.js') ?>?v=20260616historyphoto"></script>
+    <script src="<?= app_url('js/historial.js') ?>?v=20260622exportlayout"></script>
   </body>
 </html>
 

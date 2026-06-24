@@ -40,6 +40,7 @@ const advancedSearchSummary = document.getElementById("advancedSearchSummary");
 const advancedFilterList = document.getElementById("advancedFilterList");
 const addAdvancedFilterBtn = document.getElementById("addAdvancedFilterBtn");
 const clearAdvancedSearchBtn = document.getElementById("clearAdvancedSearchBtn");
+const advancedSearchActions = advancedSearchForm.querySelector(".modal-actions");
 const exportSearch = document.getElementById("exportSearch");
 const exportSelectAll = document.getElementById("exportSelectAll");
 const exportCount = document.getElementById("exportCount");
@@ -50,6 +51,10 @@ const importFileHint = document.getElementById("importFileHint");
 const importStatus = document.getElementById("importStatus");
 const downloadImportTemplateBtn = document.getElementById("downloadImportTemplateBtn");
 const createImportedPartesBtn = document.getElementById("createImportedPartesBtn");
+const addAnotherImageBtn = document.getElementById("addAnotherImageBtn");
+const imageImportNote = document.getElementById("imageImportNote");
+const importHeadTitle = document.querySelector(".import-head strong");
+const importHeadDescription = document.querySelector(".import-head p");
 const vehiclesWrap = document.getElementById("vehiclesWrap");
 const peopleAssignmentPanel = document.getElementById("peopleAssignmentPanel");
 const peopleAssignmentRows = document.getElementById("peopleAssignmentRows");
@@ -86,6 +91,15 @@ const canExportPartes = hasRole("administrador", "capturista", "auxiliar");
 const mpInput = parteForm.elements.id_mp;
 const respondienteInput = parteForm.elements.respondiente_nombre;
 
+// Keeps the advanced-search actions compact without changing their behavior.
+advancedSearchActions.classList.add("advanced-search-actions");
+clearAdvancedSearchBtn.className = "advanced-clear-btn";
+clearAdvancedSearchBtn.title = "Limpiar busqueda";
+clearAdvancedSearchBtn.setAttribute("aria-label", "Limpiar busqueda");
+clearAdvancedSearchBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+addAdvancedFilterBtn.classList.remove("blue", "outline");
+addAdvancedFilterBtn.classList.add("amber");
+
 let catalogsLoaded = false;
 let partCatalogs = { mps: [], respondientes: [], corralones: [] };
 let locationMapInstance = null;
@@ -94,6 +108,7 @@ let locationZoomControl = null;
 let importRowsData = [];
 let importSkippedRows = [];
 let importType = "excel";
+let importImageFiles = [];
 let usersCache = [];
 
 const excelPartesColumns = [
@@ -922,7 +937,10 @@ async function openImport() {
 function resetImportModal() {
   importRowsData = [];
   importSkippedRows = [];
+  importImageFiles = [];
   importFileInput.value = "";
+  addAnotherImageBtn.hidden = true;
+  imageImportNote.hidden = true;
   importFileTitle.textContent = "Seleccionar archivo";
   importFileHint.textContent = "Formatos aceptados: .xlsx, .xls, .csv, imagen o PDF.";
   importStatus.textContent = "Descarga la plantilla o selecciona un archivo para previsualizar.";
@@ -932,6 +950,7 @@ function resetImportModal() {
 
 /** Cambia el tipo de archivo esperado por el importador. */
 function setImportType(type) {
+  const changedType = importType !== type;
   importType = type;
   document.querySelectorAll("[data-import-type]").forEach((button) => {
     button.classList.toggle("active", button.dataset.importType === type);
@@ -942,11 +961,27 @@ function setImportType(type) {
     pdf: ".pdf",
   };
   importFileInput.accept = acceptByType[type] || acceptByType.excel;
+  importFileInput.multiple = false;
+  imageImportNote.hidden = type !== "image";
+  if (changedType) {
+    importRowsData = [];
+    importSkippedRows = [];
+    importImageFiles = [];
+    importFileInput.value = "";
+    addAnotherImageBtn.hidden = true;
+    renderImportRows();
+  }
   if (type === "excel") {
-    importFileHint.textContent = "Sube la plantilla en .xlsx, .xls o .csv para crear partes.";
+    importHeadTitle.textContent = "Importar partes al sistema";
+    importHeadDescription.textContent = "Descarga la plantilla, llenala y subela para crear varios partes en una sola carga.";
+    importFileHint.textContent = "Sube la plantilla o un Excel con encabezados equivalentes (.xlsx, .xls o .csv).";
   } else if (type === "image") {
+    importHeadTitle.textContent = "Importar un parte desde imagenes";
+    importHeadDescription.textContent = "Agrega las fotos o paginas del mismo parte; el sistema las unira en un solo registro.";
     importFileHint.textContent = "Sube PNG/JPEG. El servidor intentará leerlo con OCR.space.";
   } else {
+    importHeadTitle.textContent = "Importar un parte desde PDF";
+    importHeadDescription.textContent = "Selecciona un documento PDF para extraer la informacion disponible.";
     importFileHint.textContent = "Sube PDF. El servidor intentará PdfParser y usará OCR.space si necesita OCR.";
   }
 }
@@ -1036,21 +1071,56 @@ function importTemplateHeaders() {
 
 /** Lee el archivo seleccionado y prepara la vista previa. */
 async function handleImportFile() {
-  const file = importFileInput.files?.[0];
-  if (!file) return;
-  importFileTitle.textContent = file.name;
+  const files = [...(importFileInput.files || [])];
+  if (!files.length) return;
+  const isImageImport = importType === "image";
+  importFileTitle.textContent = isImageImport && importImageFiles.length ? `Imagen ${importImageFiles.length + 1}: ${files[0].name}` : files[0].name;
   importStatus.textContent = "Leyendo archivo...";
 
   try {
-    importRowsData = await previewImportFile(file);
+    if (!isImageImport) {
+      importRowsData = [];
+      importSkippedRows = [];
+    }
+    const skippedRows = [...importSkippedRows];
+    for (const [index, file] of files.entries()) {
+      const rows = await previewImportFile(file);
+      const importedRows = rows.map((row) => ({ ...row, _source_file: file.name }));
+      if (isImageImport && importedRows[0]) {
+        importRowsData[0] = importRowsData[0]
+          ? mergeImageImportPart(importRowsData[0], importedRows[0])
+          : importedRows[0];
+      } else {
+        importRowsData.push(...importedRows);
+      }
+      skippedRows.push(...importSkippedRows);
+      if (isImageImport) importImageFiles.push(file.name);
+      importStatus.textContent = files.length === 1 ? "Leyendo archivo..." : `Leyendo ${index + 1} de ${files.length} imagenes...`;
+    }
+    importSkippedRows = skippedRows;
+    const seenFolios = new Set();
+    importRowsData = importRowsData.filter((row) => {
+      const folio = String(row.folio || "").trim().toUpperCase();
+      if (!folio || !seenFolios.has(folio)) {
+        if (folio) seenFolios.add(folio);
+        return true;
+      }
+      importSkippedRows.push({ folio, reason: "Folio repetido entre los archivos seleccionados" });
+      return false;
+    });
+    addAnotherImageBtn.hidden = !isImageImport;
+    importFileInput.value = "";
+    const imageSummary = isImageImport && importImageFiles.length
+      ? ` Se integraron ${importImageFiles.length} imagen(es) en un solo parte.`
+      : "";
     importStatus.textContent = importRowsData.length
-      ? `Se detectaron ${importRowsData.length} parte(s) nuevo(s).${importSkippedText()} Revisa la vista previa antes de crear.`
+      ? `Se detectaron ${importRowsData.length} parte(s) nuevo(s).${imageSummary}${importSkippedText()} Revisa la vista previa antes de crear.`
       : `No se encontraron partes nuevos.${importSkippedText()}`;
     renderImportRows();
   } catch (error) {
     if (importType === "excel") {
       try {
-        importRowsData = await readImportSpreadsheet(file);
+        importRowsData = await readImportSpreadsheet(files[0]);
         importSkippedRows = [];
         importStatus.textContent = importRowsData.length
           ? `Se detectaron ${importRowsData.length} parte(s) desde el navegador.`
@@ -1065,6 +1135,48 @@ async function handleImportFile() {
     importStatus.textContent = error.message || "No se pudo leer el archivo.";
     renderImportRows();
   }
+}
+
+/** Combina la lectura de paginas/fotos que pertenecen al mismo parte. */
+function mergeImageImportPart(base, extra) {
+  const merged = { ...base };
+  const fields = [
+    "folio", "tipo_parte", "fecha", "hora", "respondiente_nombre", "mp_nombre",
+    "estado", "gravedad_general", "ubicacion_kilometro", "ubicacion_direccion",
+    "ubicacion_lat", "ubicacion_lng", "numero_personas", "numero_fallecidos",
+    "numero_heridos", "observaciones",
+  ];
+  fields.forEach((field) => {
+    if (!String(merged[field] || "").trim() && String(extra[field] || "").trim()) {
+      merged[field] = extra[field];
+    }
+  });
+  const baseVehicles = Array.isArray(base.vehiculos) ? base.vehiculos : [];
+  const extraVehicles = Array.isArray(extra.vehiculos) ? extra.vehiculos : [];
+  const keys = new Set(baseVehicles.map((vehicle) => `${vehicle.numero_serie || ""}|${vehicle.numero_placa || ""}|${vehicle.marca || ""}|${vehicle.modelo || ""}`));
+  merged.vehiculos = [...baseVehicles];
+  extraVehicles.forEach((vehicle) => {
+    const key = `${vehicle.numero_serie || ""}|${vehicle.numero_placa || ""}|${vehicle.marca || ""}|${vehicle.modelo || ""}`;
+    if (!keys.has(key)) {
+      keys.add(key);
+      merged.vehiculos.push(vehicle);
+    }
+  });
+  const recovered = new Set(fields.filter((field) => String(extra[field] || "").trim()).map((field) => importWarningLabel(field)));
+  merged._missing_fields = (base._missing_fields || []).filter((field) => !recovered.has(field));
+  merged._warnings = merged._missing_fields.map((field) => `No se encontro: ${field}`);
+  return merged;
+}
+
+/** Traduce claves del payload a las etiquetas de advertencia del importador. */
+function importWarningLabel(field) {
+  const labels = {
+    folio: "Folio del parte", tipo_parte: "Motivo del parte", fecha: "Fecha", hora: "Hora",
+    respondiente_nombre: "Respondiente", mp_nombre: "MP asignado", estado: "Estado",
+    gravedad_general: "Gravedad general", ubicacion_kilometro: "Kilometro o referencia",
+    ubicacion_direccion: "Direccion", numero_personas: "Numero de personas",
+  };
+  return labels[field] || field;
 }
 
 /** Envia el archivo al backend para usar OCR.space, PdfParser o PhpSpreadsheet. */
@@ -1278,7 +1390,10 @@ async function exportPartes(type) {
     }
     const detailed = await loadDetailedParts(selected);
     downloadExport(type, detailed);
-    await api("/api/partes/export", { method: "POST", body: JSON.stringify({ tipo: type, total: selected.length }) });
+    await api("/api/partes/export", {
+      method: "POST",
+      body: JSON.stringify({ tipo: type, total: selected.length, folios: selected.map((parte) => parte.folio).filter(Boolean) }),
+    });
     closeModal("exportModal");
     showToast("Exportación realizada con éxito");
   });
@@ -1361,6 +1476,7 @@ function exportHtml(rows) {
           .value{display:block;min-height:15px;font-size:12px;font-weight:700;word-break:break-word}
           .section-title{margin:0;padding:5px 8px;background:#d8dde8;border-top:2px solid #111827;border-bottom:1px solid #111827;color:#111827;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
           .section-title:first-child{border-top:0}
+          .export-part .section-title:nth-of-type(6),.export-part .section-title:nth-of-type(6)+.field-grid{display:none}
           .field-grid{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #111827}
           .field-grid.cols-2{grid-template-columns:repeat(2,1fr)}
           .field-grid.cols-3{grid-template-columns:repeat(3,1fr)}
@@ -1384,7 +1500,6 @@ function exportHtml(rows) {
           <header class="batch-cover">
             <div class="cover-title">Partes de tránsito exportados</div>
             <div class="cover-meta">
-              <span><b>Total de partes:</b> ${rows.length}</span>
               <span><b>Generado:</b> ${escapeHtml(generatedAt)}</span>
             </div>
           </header>
@@ -1406,7 +1521,7 @@ function exportPartSection(parte) {
           <h1>Informe policial homologado</h1>
           <p>Registro del parte de tránsito y datos asociados al hecho</p>
         </div>
-        <div class="iph-code">PTARM<br>${fieldHtml(parte.id_parte)}</div>
+        <div class="iph-code">PTARM</div>
       </div>
       <div class="folio-strip">
         ${officialField("No. de parte / folio", parte.folio, "Parte sin folio", "folio-box")}
@@ -1482,7 +1597,10 @@ function exportPartSection(parte) {
 
 /** Devuelve una celda estilo formato oficial con etiqueta y valor. */
 function officialField(label, value, fallback = "", className = "iph-field") {
-  return `<div class="${className}"><span class="label">${escapeHtml(label)}</span><span class="value">${fieldHtml(value, fallback)}</span></div>`;
+  const privateLabels = ["ID MP", "ID usuario encargado", "ID del parte", "ID respondiente", "ID usuario creador", "Latitud", "Longitud"];
+  if (privateLabels.includes(label)) return "";
+  const visibleLabel = label.includes("OpenStreetMap") ? "Dirección" : label;
+  return `<div class="${className}"><span class="label">${escapeHtml(visibleLabel)}</span><span class="value">${fieldHtml(value, fallback)}</span></div>`;
 }
 
 /** Devuelve un campo de exportacion con etiqueta y valor seguro. */
@@ -2223,10 +2341,11 @@ async function createImportedPartes() {
   showConfirm("Crear partes importados", `Se crearán ${importRowsData.length} parte(s). ¿Deseas continuar?`, async () => {
     let created = 0;
     const failed = [];
+    const importBatch = `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     createImportedPartesBtn.disabled = true;
     importStatus.textContent = `Importando 0 de ${importRowsData.length} parte(s)...`;
     for (const [index, row] of importRowsData.entries()) {
-      const payload = { ...row, _import_source: importType };
+      const payload = { ...row, _import_source: importType, _activity_batch: importBatch };
       const data = await api("/api/partes", { method: "POST", body: JSON.stringify(payload) });
       if (data?.success) created += 1;
       else failed.push(`#${index + 1} ${row.folio || "sin folio"}: ${data?.error || "No se pudo crear"}`);
@@ -2322,6 +2441,7 @@ document.querySelectorAll("[data-import-type]").forEach((button) => {
   button.addEventListener("click", () => setImportType(button.dataset.importType));
 });
 importFileInput.addEventListener("change", handleImportFile);
+addAnotherImageBtn.addEventListener("click", () => importFileInput.click());
 downloadImportTemplateBtn.addEventListener("click", downloadImportTemplate);
 createImportedPartesBtn.addEventListener("click", createImportedPartes);
 

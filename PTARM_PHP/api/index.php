@@ -146,6 +146,35 @@
         return $time ? date('Y-m-d', $time) : $value;
     }
 
+    /** Extracts the part folios stored in an activity detail for statistics. */
+    function activity_folios(?string $detail, ?string $folio = null): array
+    {
+        if (clean($folio)) {
+            return [(string) $folio];
+        }
+        $detail = (string) $detail;
+        if (preg_match('/Folios:\s*(.+)$/iu', $detail, $match)) {
+            return array_values(array_filter(array_map('trim', preg_split('/[|,]/', $match[1]) ?: [])));
+        }
+        if (preg_match('/Parte\s+([^\s]+)\s+(?:creado|editado|eliminado)/iu', $detail, $match)) {
+            return [trim($match[1])];
+        }
+        return [];
+    }
+
+    /** Extracts the name and email saved when an administrator creates a user. */
+    function activity_created_user(?string $detail): ?string
+    {
+        $detail = trim((string) $detail);
+        return preg_match('/Usuario creado:\s*(.+)$/iu', $detail, $match) ? trim($match[1]) : null;
+    }
+
+    /** Reads the batch identifier used when several parts are created together. */
+    function activity_batch(?string $detail): ?string
+    {
+        return preg_match('/Lote:\s*([a-zA-Z0-9_-]+)/', (string) $detail, $match) ? $match[1] : null;
+    }
+
     function import_first_match(string $text, array $patterns): ?string
     {
         foreach ($patterns as $pattern) {
@@ -195,6 +224,48 @@
         return 'Sin clasificar|Bajo|Medio|Alto|Otro';
     }
 
+    /** Maps common third-party spreadsheet labels to PTARM import fields. */
+    function import_canonical_header(string $header): string
+    {
+        $key = import_clean_key($header);
+        $aliases = [
+            'folio' => ['folio', 'no_parte', 'no_de_parte', 'numero_de_parte', 'numero_parte', 'folio_del_parte'],
+            'tipo_parte' => ['tipo_parte', 'motivo', 'motivo_del_parte', 'tipo_de_incidente', 'incidente', 'hecho'],
+            'fecha' => ['fecha', 'fecha_del_parte', 'fecha_incidente'],
+            'hora' => ['hora', 'hora_del_parte', 'hora_incidente'],
+            'respondiente_nombre' => ['respondiente', 'respondiente_nombre', 'policia_respondiente', 'autoridad_respondiente'],
+            'mp_nombre' => ['mp', 'mp_asignado', 'mp_nombre', 'ministerio_publico', 'ministerio_publico_asignado'],
+            'encargado_nombre' => ['encargado', 'encargado_nombre', 'usuario_encargado', 'responsable', 'asignado_a'],
+            'estado' => ['estado', 'estatus'],
+            'gravedad_general' => ['gravedad', 'gravedad_general', 'nivel_de_gravedad'],
+            'ubicacion_kilometro' => ['kilometro', 'km', 'kilometro_o_referencia', 'referencia', 'ubicacion_kilometro'],
+            'ubicacion_direccion' => ['direccion', 'domicilio', 'ubicacion', 'ubicacion_direccion'],
+            'ubicacion_lat' => ['latitud', 'ubicacion_lat', 'lat'],
+            'ubicacion_lng' => ['longitud', 'ubicacion_lng', 'lng', 'lon'],
+            'numero_personas' => ['numero_personas', 'total_personas', 'personas'],
+            'personas_fallecidas' => ['personas_fallecidas', 'fallecidas', 'hubo_fallecidos'],
+            'numero_fallecidos' => ['numero_fallecidos', 'total_fallecidos'],
+            'personas_heridas' => ['personas_heridas', 'heridas', 'hubo_heridos'],
+            'numero_heridos' => ['numero_heridos', 'total_heridos'],
+            'observaciones' => ['observaciones', 'observacion', 'notas', 'comentarios'],
+            'tipo_vehiculo' => ['tipo_vehiculo', 'clase_vehiculo', 'clase'],
+            'marca' => ['marca', 'marca_vehiculo'],
+            'modelo' => ['modelo', 'modelo_vehiculo'],
+            'tipo' => ['tipo', 'tipo_de_vehiculo'],
+            'numero_serie' => ['numero_serie', 'no_serie', 'serie', 'vin'],
+            'numero_placa' => ['numero_placa', 'no_placa', 'placa', 'placas'],
+            'corralon' => ['corralon', 'deposito_vehicular'],
+            'estatus_vehiculo' => ['estatus_vehiculo', 'estado_vehiculo'],
+            'danos_vehiculo' => ['danos_vehiculo', 'danos'],
+        ];
+        foreach ($aliases as $canonical => $options) {
+            if (in_array($key, $options, true)) {
+                return $canonical;
+            }
+        }
+        return $key;
+    }
+
     function import_header_score(array $row): int
     {
         $accepted = [
@@ -207,7 +278,7 @@
         ];
         $score = 0;
         foreach ($row as $cell) {
-            if (in_array(import_clean_key((string) $cell), $accepted, true)) {
+            if (in_array(import_canonical_header((string) $cell), $accepted, true)) {
                 $score++;
             }
         }
@@ -218,15 +289,24 @@
     {
         $headerIndex = null;
         foreach ($matrix as $index => $row) {
-            if (import_header_score(array_values($row)) >= 3) {
+            if (import_header_score(array_values($row)) >= 2) {
                 $headerIndex = $index;
                 break;
             }
         }
         if ($headerIndex === null) {
-            return [];
+            $lines = [];
+            foreach ($matrix as $line) {
+                $cells = array_values(array_filter(array_map('trim', array_map('strval', (array) $line)), fn($value) => $value !== ''));
+                if (count($cells) >= 2) {
+                    $lines[] = $cells[0] . ': ' . $cells[1];
+                } elseif ($cells) {
+                    $lines[] = implode(' ', $cells);
+                }
+            }
+            return import_rows_from_text(implode("\n", $lines));
         }
-        $headers = array_values($matrix[$headerIndex]);
+        $headers = array_map('import_canonical_header', array_values($matrix[$headerIndex]));
         $rows = [];
         foreach (array_slice($matrix, $headerIndex + 1) as $line) {
             $line = array_values($line);
@@ -235,7 +315,12 @@
             }
             $rows[] = array_combine($headers, array_pad($line, count($headers), '')) ?: [];
         }
-        return array_values(array_filter(array_map('normalize_import_row', $rows)));
+        $normalizedRows = array_values(array_filter(array_map('normalize_import_row', $rows)));
+        foreach ($normalizedRows as &$normalizedRow) {
+            import_add_missing_warnings($normalizedRow);
+        }
+        unset($normalizedRow);
+        return $normalizedRows;
     }
 
     function parse_import_vehicle_summary(?string $value): array
@@ -331,12 +416,25 @@
             'numero_serie' => 'No. serie',
         ];
         $missing = [];
+        $vehicle = (array) ($normalized['vehiculos'][0] ?? []);
         foreach ($checks as $key => $label) {
-            if (!clean($rawRow[$key] ?? null)) {
+            $value = $normalized[$key] ?? null;
+            if ($key === 'numero_placa' || $key === 'numero_serie') {
+                $value = $vehicle[$key] ?? null;
+            }
+            if (!clean($value)) {
                 $missing[] = $label;
             }
         }
         return array_values(array_unique($missing));
+    }
+
+    /** Adds the warnings consumed by the import preview for every source. */
+    function import_add_missing_warnings(array &$row): void
+    {
+        $missing = import_missing_fields([], $row);
+        $row['_missing_fields'] = $missing;
+        $row['_warnings'] = array_map(fn($field) => 'No se encontro: ' . $field, $missing);
     }
 
     function parse_import_csv(string $text): array
@@ -382,8 +480,12 @@
         if (class_exists('\\PhpOffice\\PhpSpreadsheet\\IOFactory')) {
             try {
                 $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tmp);
-                $sheet = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
-                return import_rows_from_matrix(array_map('array_values', $sheet));
+                $rows = [];
+                foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
+                    $matrix = array_map('array_values', $sheet->toArray(null, true, true, true));
+                    $rows = array_merge($rows, import_rows_from_matrix($matrix));
+                }
+                return $rows;
             } catch (Throwable $error) {
             }
         }
@@ -1062,7 +1164,9 @@
                     $photo,
                     (int) ($body['id_rol'] ?? 2),
                 ]);
-                record_activity('CREACION_USUARIO', (int) $user['id_usuario'], null, 'Usuario creado');
+                $createdName = clean($body['nombre'] ?? null) ?: 'Sin nombre';
+                $createdEmail = clean($body['correo'] ?? null) ?: 'Sin correo';
+                record_activity('CREACION_USUARIO', (int) $user['id_usuario'], null, 'Usuario creado: ' . $createdName . ' <' . $createdEmail . '>');
                 out(['success' => true, 'message' => 'Usuario creado']);
             }
         }
@@ -1255,15 +1359,24 @@
                 )->execute([$folio, clean($body['tipo_parte'] ?? null), clean($body['fecha'] ?? null), clean($body['hora'] ?? null), clean($body['ubicacion_kilometro'] ?? null), clean($body['ubicacion_direccion'] ?? null), clean($body['ubicacion_lat'] ?? null), clean($body['ubicacion_lng'] ?? null), clean($body['google_place_id'] ?? null), $idMp, $idResp, clean($body['estado'] ?? null) ?: 'Activo', clean($body['gravedad_general'] ?? null) ?: 'Sin clasificar', (int) $user['id_usuario'], clean($body['asignado_a'] ?? null)]);
                 $id = (int) db()->lastInsertId();
                 save_details($id, $body);
+                $batch = clean($body['_activity_batch'] ?? null);
+                $activityDetail = 'Parte ' . ($folio ?: $id) . ' creado';
+                if ($batch) {
+                    $activityDetail .= ' | Lote: ' . preg_replace('/[^a-zA-Z0-9_-]/', '', $batch);
+                }
                 record_history('CREAR', $id, (int) $user['id_usuario'], 'Parte ' . $folio . ' creado desde PHP');
-                record_activity('CREACION_PARTE', (int) $user['id_usuario'], $id, 'Parte ' . $folio . ' creado');
+                record_activity('CREACION_PARTE', (int) $user['id_usuario'], $id, $activityDetail);
                 out(['success' => true, 'message' => 'Parte creado', 'id' => $id]);
             }
         }
 
         // Exportaci?n: partes.js registra que se preparo PDF o Excel.
         if ($path === '/api/partes/export' && $method === 'POST') {
+            $folios = array_values(array_unique(array_filter(array_map('clean', (array) ($body['folios'] ?? [])))));
             $exportDetail = 'Exportación ' . strtoupper((string) ($body['tipo'] ?? 'archivo')) . ' de ' . (int) ($body['total'] ?? 0) . ' parte(s)';
+            if ($folios) {
+                $exportDetail .= ' | Folios: ' . implode(', ', $folios);
+            }
             record_history('EXPORTAR', null, (int) $user['id_usuario'], $exportDetail);
             record_activity('EXPORTACION', (int) $user['id_usuario'], null, $exportDetail);
             out(['success' => true, 'message' => 'Exportación registrada']);
@@ -1342,7 +1455,7 @@
             }
 
             // Estadisticas: historial.js las usa para graficas y exportaciones.
-            if ($path === '/api/historial/estad?sticas/detalle') {
+            if ($path === '/api/historial/estadisticas/detalle') {
                 $type = (string) ($apiQuery['tipo'] ?? '');
                 $month = (int) ($apiQuery['mes'] ?? date('n'));
                 $year = (int) ($apiQuery['anio'] ?? date('Y'));
@@ -1359,10 +1472,15 @@
                 $stmt->execute([$type, $start, $end]);
                 $records = $stmt->fetchAll();
                 $users = [];
-                foreach ($records as $record) {
+                foreach ($records as &$record) {
                     $name = $record['usuario_nombre'] ?: 'Sistema';
                     $users[$name] = ($users[$name] ?? 0) + 1;
+                    $record['usuario'] = $name;
+                    $record['folios'] = activity_folios($record['detalle'] ?? null, $record['folio'] ?? null);
+                    $record['usuario_creado'] = activity_created_user($record['detalle'] ?? null);
+                    $record['lote'] = activity_batch($record['detalle'] ?? null);
                 }
+                unset($record);
                 $userRows = [];
                 foreach ($users as $name => $total) {
                     $userRows[] = ['nombre' => $name, 'total' => $total];
@@ -1378,7 +1496,7 @@
                 ]]);
             }
 
-            if (strpos($path, '/api/historial/estad?sticas') === 0) {
+            if (strpos($path, '/api/historial/estadisticas') === 0) {
                 $month = (int) ($apiQuery['mes'] ?? date('n'));
                 $year = (int) ($apiQuery['anio'] ?? date('Y'));
                 $start = sprintf('%04d-%02d-01 00:00:00', $year, $month);
@@ -1410,7 +1528,21 @@
                 ]]);
             }
 
-            $stmt = db()->query(
+            $historyAction = strtoupper(trim((string) ($apiQuery['accion'] ?? '')));
+            $historyQuery = trim((string) ($apiQuery['q'] ?? ''));
+            $where = [];
+            $params = [];
+            if (in_array($historyAction, ['CREAR', 'EDITAR', 'ELIMINAR', 'EXPORTAR'], true)) {
+                $where[] = 'h.accion = ?';
+                $params[] = $historyAction;
+            }
+            if ($historyQuery !== '') {
+                $where[] = '(h.descripcion LIKE ? OR p.folio LIKE ? OR u.nombre LIKE ?)';
+                $like = '%' . $historyQuery . '%';
+                array_push($params, $like, $like, $like);
+            }
+            $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+            $stmt = db()->prepare(
                 "SELECT h.*, p.folio, p.fecha AS parte_fecha, mp.nombre AS mp_nombre, u.nombre AS usuario_nombre,
                     u.imagen_perfil AS usuario_foto, enc.nombre AS encargado_nombre, enc.imagen_perfil AS encargado_foto
              FROM historial_cambios h
@@ -1418,9 +1550,11 @@
              LEFT JOIN ministerios_publicos mp ON mp.id_mp = p.id_mp
              LEFT JOIN usuarios u ON u.id_usuario = h.id_usuario
              LEFT JOIN usuarios enc ON enc.id_usuario = p.asignado_a
+             {$whereSql}
              ORDER BY h.fecha DESC
              LIMIT 200"
             );
+            $stmt->execute($params);
             $rows = $stmt->fetchAll();
             foreach ($rows as &$row) {
                 $row['usuario_foto'] = asset_path($row['usuario_foto'] ?? null);

@@ -1350,13 +1350,13 @@ tbody tr:hover {
 
 .advanced-search-intro {
   display: grid;
-  gap: 6px;
-  margin-bottom: 20px;
+  gap: 4px;
+  margin-bottom: 16px;
   border: 1px solid rgba(6, 20, 95, 0.1);
   border-radius: 8px;
-  padding: 14px 16px;
+  padding: 12px 15px;
   color: var(--navy);
-  background: linear-gradient(135deg, #ffffff 0%, #f4f7fb 100%);
+  background: #f8fafc;
 }
 
 .advanced-search-intro strong {
@@ -1369,14 +1369,35 @@ tbody tr:hover {
 }
 
 .advanced-search-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
   align-items: end;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.advanced-search-grid label {
+  margin: 0;
+  padding: 12px 14px;
+}
+
+.advanced-search-grid label + label {
+  border-left: 1px solid var(--line);
+}
+
+.advanced-search-grid input,
+.advanced-search-grid select {
+  margin-top: 7px;
 }
 
 .advanced-filter-list {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin: 0 0 18px;
+  margin: 0 0 14px;
 }
 
 .advanced-filter-list[hidden] {
@@ -1388,12 +1409,12 @@ tbody tr:hover {
   align-items: center;
   gap: 8px;
   max-width: 100%;
-  border: 1px solid rgba(6, 20, 95, 0.14);
-  border-radius: 8px;
+  border: 1px solid #f6c35b;
+  border-radius: 999px;
   padding: 8px 10px;
   color: var(--navy);
-  background: #ffffff;
-  box-shadow: 0 6px 16px rgba(18, 48, 85, 0.07);
+  background: #fffbeb;
+  box-shadow: none;
 }
 
 .advanced-filter-chip button {
@@ -1412,8 +1433,8 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 14px 0 22px;
-  font-size: 0.92rem;
+  margin: 11px 2px 14px;
+  font-size: 0.84rem;
 }
 
 .advanced-search-hint i {
@@ -1425,6 +1446,30 @@ tbody tr:hover {
   justify-content: flex-end;
   gap: 12px;
   padding-top: 4px;
+}
+
+.advanced-search-actions {
+  align-items: center;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 16px;
+}
+
+.advanced-clear-btn {
+  width: 40px;
+  height: 40px;
+  display: inline-grid;
+  place-items: center;
+  margin-right: auto;
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+  color: #dc2626;
+  background: #fffafa;
+  cursor: pointer;
+}
+
+.advanced-clear-btn:hover {
+  border-color: #ef4444;
+  background: #fef2f2;
 }
 
 .export-head {
@@ -1611,6 +1656,25 @@ tbody tr:hover {
   background: #f8fafc;
 }
 
+.image-import-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  border: 1px solid #f6c35b;
+  border-radius: 8px;
+  padding: 11px 13px;
+  color: #7c4a03;
+  background: #fffbeb;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.image-import-note i {
+  color: #d97706;
+  margin-top: 2px;
+}
+
 .import-template-note i {
   color: #2563eb;
   font-size: 1.2rem;
@@ -1659,6 +1723,23 @@ tbody tr:hover {
 .import-status-row .import-count {
   background: #d97706;
   box-shadow: 0 8px 16px rgba(217, 119, 6, 0.16);
+}
+
+.import-toolbar [data-import-type] {
+  border-color: #f59e0b;
+  color: #92400e;
+  background: #fff7ed;
+}
+
+.import-toolbar [data-import-type].active {
+  border-color: #b45309;
+  color: #ffffff;
+  background: #d97706;
+  box-shadow: 0 5px 12px rgba(180, 83, 9, 0.22);
+}
+
+.add-image-btn {
+  margin: -4px 0 14px;
 }
 
 .import-preview-wrap {
@@ -2512,6 +2593,55 @@ legend {
 
 .stats-detail-table {
   width: 100%;
+}
+
+.stats-export-activities {
+  margin-top: 18px;
+}
+
+.stats-export-activities > strong {
+  display: block;
+  color: var(--navy);
+  font-size: 0.9rem;
+}
+
+.export-head .stats-export-activities {
+  margin: 10px 0 0;
+}
+
+.export-head .stats-export-activities .export-chart-options {
+  margin-top: 10px;
+}
+
+.stats-folio {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  border: 1px solid #bfdbfe;
+  border-radius: 5px;
+  padding: 3px 6px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.stats-folios-btn {
+  min-height: 32px;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+
+.stats-folios-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding-left: 28px;
+}
+
+.stats-folios-list li {
+  padding-left: 4px;
+  color: var(--navy);
+  font-weight: 700;
 }
 
 .muted-cell {
