@@ -49,7 +49,7 @@
           <a data-page="partes" href="/partes.html"
             ><span class="nav-icon"
               ><img src="/img/iconos/gestion.png" alt="" /></span
-            ><span>Gestionar partes</span></a
+            ><span>Gestionar Partes</span></a
           >
           <a data-page="historial" href="/historial.html"
             ><span class="nav-icon"><img src="/img/iconos/historial.png" alt="" /></span
@@ -58,7 +58,7 @@
           <div class="side-section">Sesión</div>
           <button onclick="logout()">
             <span class="nav-icon"><img src="/img/iconos/salida.png" alt="" /></span
-            ><span>Cerrar sesión</span>
+            ><span>Cerrar Sesión</span>
           </button>
           <button class="collapse-btn" onclick="toggleSidebar()">
             <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
@@ -69,8 +69,8 @@
       <main class="content">
         <header class="topbar">
           <a class="topbar-brand" href="/inicio.html">
-            <img class="logo" src="/img/Logo.png" alt="FGE" />
-            <span>Sistema de partes</span>
+            <img class="logo" src="/img/Logo.png" data-logo-light="/img/Logo.png" data-logo-dark="/img/logot.png" alt="FGE" />
+            <span>Sistema de Partes</span>
           </a>
           <div class="user-menu">
             <button class="user-top" type="button">
@@ -85,7 +85,7 @@
         <section class="page">
           <div class="hero-card">
             <div>
-              <h1>Datos generales</h1>
+              <h1>Datos Generales</h1>
               <p>
                 Un parte de tránsito es un documento oficial que se elabora
                 cuando ocurre un accidente vial o choque de tránsito. Este
@@ -100,7 +100,7 @@
             </div>
           </div>
           <div class="section-title">
-            <h2>Partes recientes</h2>
+            <h2>Partes Recientes</h2>
             <p>
               Consulta los registros recientes y accede a las funciones
               principales del sistema.
@@ -110,7 +110,7 @@
             id="homeSearch"
             class="search"
             style="display: block; margin: 0 auto 22px"
-            placeholder="Buscar partes"
+            placeholder="Buscar Partes"
           />
           <div class="table-controls">
             <label class="inline-check"
@@ -147,34 +147,28 @@
           </div>
           <div class="section-title">
             <h2>Menú del sistema</h2>
-            <p>
-              Selecciona una opción para trabajar con los partes de tránsito
-            </p>
+            <p id="systemMenuIntro">Selecciona una opción para trabajar con los partes de tránsito.</p>
           </div>
           <div class="menu-grid">
             <a class="menu-card hover-lift" data-page="partes" href="/partes.html"
               ><span>01</span>
-              <h3>Lista de partes</h3>
-              <p>Crear, buscar, filtrar, consultar información y editar.</p></a
+              <h3 data-menu-title>Gestión de partes</h3>
+              <p data-menu-description>Consulta y administra los registros de tránsito.</p></a
             >
             <a class="menu-card hover-lift" data-page="historial" href="/historial.html"
               ><span>02</span>
-              <h3>Historial</h3>
-              <p>
-                Consultar acciones realizadas en el sistema.
-              </p></a
+              <h3 data-menu-title>Historial y estadísticas</h3>
+              <p data-menu-description>Revisa actividad, estadísticas y exporta reportes.</p></a
             >
             <a class="menu-card hover-lift" data-page="perfil" href="/perfil.html"
               ><span>03</span>
-              <h3>Mi perfil</h3>
-              <p>Ver datos de cuenta, foto de perfil y partes asignados.</p></a
+              <h3 data-menu-title>Mi perfil</h3>
+              <p data-menu-description>Consulta tus datos de cuenta, foto y partes asignados.</p></a
             >
             <a class="menu-card hover-lift" data-page="personal" href="/personal.html"
               ><span>04</span>
-              <h3>Personal</h3>
-              <p>
-                Administrar usuarios, ministerios públicos y respondientes.
-              </p></a
+              <h3 data-menu-title>Administración de personal</h3>
+              <p data-menu-description>Gestiona usuarios, roles, MP y respondientes.</p></a
             >
           </div>
         </section>

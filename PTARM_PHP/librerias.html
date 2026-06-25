@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Librerias externas | PTARM</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --ink: #172033;
+        --muted: #607089;
+        --brand: #06145f;
+        --line: #d9e0ec;
+        --soft: #eef3ff;
+        --ok: #0f766e;
+        --warn: #b45309;
+        --radius: 10px;
+      }
+
+      * {box-sizing: border-box;}
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Arial, Helvetica, sans-serif;
+        line-height: 1.55;}
+
+      header {
+        background: var(--brand);
+        color: #fff;
+        padding: 22px 16px;}
+
+      .wrap {
+        width: min(1120px, 100%);
+        margin: 0 auto;}
+
+      header h1 {
+        margin: 0;
+        font-size: clamp(1.35rem, 5vw, 2rem);}
+
+      header p {
+        max-width: 760px;
+        margin: 8px 0 0;
+        color: #dbe7ff;}
+
+      main {
+        padding: 18px 12px 34px;
+      }
+
+      section {
+        margin: 0 0 18px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+
+      .section-head {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        background: var(--soft);
+      }
+
+      h2 {
+        margin: 0;
+        color: var(--brand);
+        font-size: 1.05rem;
+      }
+
+      .section-head p,
+      .note p {
+        margin: 6px 0 0;
+        color: var(--muted);
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+      }
+
+      th,
+      td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f8fafc;
+        color: var(--brand);
+        font-size: 0.82rem;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      code {
+        display: inline-block;
+        max-width: 100%;
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #eef2f7;
+        color: #0f3a5f;
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 0.9em;
+        overflow-wrap: anywhere;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        padding: 14px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 12px;
+        background: #fff;
+      }
+
+      .card strong {
+        display: block;
+        color: var(--brand);
+        margin-bottom: 4px;
+      }
+
+      .card span {
+        color: var(--muted);
+      }
+
+      .note {
+        padding: 14px 16px;
+      }
+
+      .checks {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      .checks li {
+        margin: 6px 0;
+      }
+
+      .tag {
+        display: inline-block;
+        margin: 2px 4px 2px 0;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: var(--ok);
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .tag.net {
+        background: #fff7ed;
+        color: var(--warn);
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 12px 10px 28px;
+        }
+
+        section {
+          border-radius: 0;
+        }
+
+        .cards {
+          grid-template-columns: 1fr;
+        }
+
+        .desktop-table {
+          display: none;
+        }
+
+        .mobile-list {
+          display: grid;
+          gap: 10px;
+          padding: 12px;
+        }
+
+        .mobile-item {
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          padding: 12px;
+          background: #fff;
+        }
+
+        .mobile-item h3 {
+          margin: 0 0 8px;
+          color: var(--brand);
+          font-size: 1rem;
+        }
+
+        .mobile-item p {
+          margin: 7px 0;
+        }
+
+        .label {
+          display: block;
+          color: var(--muted);
+          font-size: 0.78rem;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+      }
+
+      @media (min-width: 761px) {
+        .mobile-list {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <h1>Librerias y servicios externos usados por PTARM</h1>
+        <p>
+          Archivo informativo independiente. No se conecta con el sistema; sirve
+          para abrirlo desde Android o computadora y entender que dependencias
+          usa el proyecto.
+        </p>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section>
+        <div class="section-head">
+          <h2>Librerias cargadas en pantallas</h2>
+          <p>
+            Dependencias que aparecen en los archivos PHP o CSS del sistema.
+          </p>
+        </div>
+
+        <div class="table-scroll desktop-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Libreria</th>
+                <th>Como se carga</th>
+                <th>Donde aparece</th>
+                <th>Para que se utiliza</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Font Awesome Free</td>
+                <td><code>vendor/fontawesome-free/css/all.min.css</code></td>
+                <td>
+                  <code>index.php</code>, <code>setup.php</code>,
+                  <code>cruds/*.php</code>, <code>partes.php</code>
+                </td>
+                <td>
+                  Iconos en botones, menus, tarjetas, alertas, acciones, PDF,
+                  Excel, usuario y campana.
+                </td>
+              </tr>
+              <tr>
+                <td>SweetAlert2</td>
+                <td>
+                  <code>https://cdn.jsdelivr.net/npm/sweetalert2@11</code>
+                </td>
+                <td>Login, setup y pantallas internas.</td>
+                <td>
+                  Alertas, confirmaciones y mensajes visuales. Si falla, algunas
+                  funciones usan toast o alert nativo.
+                </td>
+              </tr>
+              <tr>
+                <td>jQuery</td>
+                <td><code>vendor/jquery/jquery.min.js</code></td>
+                <td>Login y pantallas internas.</td>
+                <td>
+                  Dependencia historica requerida por Bootstrap 4, jQuery Easing
+                  y SB Admin 2.
+                </td>
+              </tr>
+              <tr>
+                <td>Bootstrap 4 Bundle</td>
+                <td>
+                  <code>vendor/bootstrap/js/bootstrap.bundle.min.js</code>
+                </td>
+                <td>Login y pantallas internas.</td>
+                <td>
+                  Componentes heredados como modales, dropdowns, transiciones y
+                  utilidades de interfaz.
+                </td>
+              </tr>
+              <tr>
+                <td>jQuery Easing</td>
+                <td><code>vendor/jquery-easing/jquery.easing.min.js</code></td>
+                <td>Pantallas internas.</td>
+                <td>
+                  Animaciones que usa la plantilla SB Admin 2 para scroll,
+                  sidebar y transiciones.
+                  para que se vean mas completas y mejor visulamente , y tenga precensia
+                  y esto ayuda a que el usuario se sienta mas comodo y tenga una mejor experiencia de usuario
+                </td>
+              </tr>
+              <tr>
+                <td>SB Admin 2</td>
+                <td>
+                  <code>js/sb-admin-2.min.js</code> y
+                  <code>css/sb-admin-2.min.css</code>
+                </td>
+                <td>Pantallas internas.</td>
+                <td>
+                  Plantilla administrativa base con estilos y comportamiento
+                  heredado de dashboard/sidebar.
+                </td>
+              </tr>
+              <tr>
+                <td>Leaflet</td>
+                <td>
+                  <code>https://unpkg.com/leaflet@1.9.4/dist/leaflet.css</code>
+                  y <code>leaflet.js</code>
+                </td>
+                <td><code>registroPartes/partes.php</code></td>
+                <td>
+                  Mapa de ubicacion en Gestionar partes.
+                  <code>partes.js</code> usa <code>L.map</code>,
+                  <code>L.tileLayer</code> y <code>L.marker</code>.
+                </td>
+              </tr>
+              <tr>
+                <td>Google Fonts - Roboto</td>
+                <td>
+                  <code>@import url("https://fonts.googleapis.com/...")</code>
+                </td>
+                <td>
+                  <code>css/styles.css</code> y <code>css/estilos.css</code>
+                </td>
+                <td>
+                  Tipografia Roboto para la interfaz. Si no carga, se usan
+                  fuentes del sistema.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mobile-list">
+          <article class="mobile-item">
+            <h3>Font Awesome Free</h3>
+            <p>
+              <span class="label">Carga</span
+              ><code>vendor/fontawesome-free/css/all.min.css</code>
+            </p>
+            <p>
+              <span class="label">Uso</span>Iconos en botones, menus, acciones,
+              PDF, Excel, usuario y campana.
+            </p>
+          </article>
+          <article class="mobile-item">
+            <h3>SweetAlert2</h3>
+            <p>
+              <span class="label">Carga</span
+              ><code>https://cdn.jsdelivr.net/npm/sweetalert2@11</code>
+            </p>
+            <p>
+              <span class="label">Uso</span>Alertas, confirmaciones y mensajes
+              visuales.
+            </p>
+          </article>
+          <article class="mobile-item">
+            <h3>jQuery</h3>
+            <p>
+              <span class="label">Carga</span
+              ><code>vendor/jquery/jquery.min.js</code>
+            </p>
+            <p>
+              <span class="label">Uso</span>Base heredada para Bootstrap, jQuery
+              Easing y SB Admin 2.
+            </p>
+          </article>
+          <article class="mobile-item">
+            <h3>Bootstrap 4 Bundle</h3>
+            <p>
+              <span class="label">Carga</span
+              ><code>vendor/bootstrap/js/bootstrap.bundle.min.js</code>
+            </p>
+            <p>
+              <span class="label">Uso</span>Componentes heredados como modales,
+              dropdowns y transiciones.
+            </p>
+          </article>
+          <article class="mobile-item">
+            <h3>jQuery Easing</h3>
+            <p>
+              <span class="label">Carga</span
+              ><code>vendor/jquery-easing/jquery.easing.min.js</code>
+            </p>
+            <p>
+              <span class="label">Uso</span>Animaciones para scroll, sidebar y
+              transiciones.
+            </p>
+          </article>
+          <article class="mobile-item">
+            <h3>SB Admin 2</h3>
+            <p>
+              <span class="label">Carga</span
+              ><code>js/sb-admin-2.min.js</code> y
+              <code>css/sb-admin-2.min.css</code>
+            </p>
+            <p>
+              <span class="label">Uso</span>Plantilla administrativa base del
+              dashboard.
+            </p>
+          </article>
+          <article class="mobile-item">
+            <h3>Leaflet</h3>
+            <p>
+              <span class="label">Carga</span
+              ><code>unpkg.com/leaflet@1.9.4</code>
+            </p>
+            <p>
+              <span class="label">Uso</span>Mapa de ubicacion en Gestionar
+              partes.
+            </p>
+          </article>
+          <article class="mobile-item">
+            <h3>Google Fonts - Roboto</h3>
+            <p>
+              <span class="label">Carga</span><code>fonts.googleapis.com</code>
+            </p>
+            <p>
+              <span class="label">Uso</span>Tipografia principal de la interfaz.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>Importación de archivos</h2>
+          <p>
+            Herramientas usadas por <code>api/index.php</code> para leer
+            archivos antes de crear partes en lote.
+          </p>
+        </div>
+        <div class="table-scroll desktop-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Formato</th>
+                <th>Herramienta</th>
+                <th>Para que se utiliza</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>PNG / JPEG</td>
+                <td>OCR.space API</td>
+                <td>Extrae texto de imagenes mediante OCR usando <code>OCR_SPACE_API_KEY</code>.</td>
+              </tr>
+              <tr>
+                <td>PDF escaneado</td>
+                <td>OCR.space API</td>
+                <td>Lee PDFs que son imagenes escaneadas cuando no tienen texto digital.</td>
+              </tr>
+              <tr>
+                <td>PDF digital</td>
+                <td>Smalot/PdfParser</td>
+                <td>Extrae texto localmente desde PDFs con texto seleccionable.</td>
+              </tr>
+              <tr>
+                <td>Excel .xlsx/.xls</td>
+                <td>PhpSpreadsheet</td>
+                <td>Lee la plantilla de importación para previsualizar y crear partes.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>Servicios externos usados por JavaScript</h2>
+          <p>
+            Servicios que se consultan desde el navegador cuando el usuario usa
+            el mapa.
+          </p>
+        </div>
+        <div class="table-scroll desktop-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Servicio</th>
+                <th>Donde se llama</th>
+                <th>Para que se utiliza</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Nominatim OpenStreetMap</td>
+                <td>
+                  <code>js/partes.js</code>, funcion
+                  <code>searchOpenStreetMap()</code>
+                </td>
+                <td>
+                  Busca una direccion o kilometro escrito por el usuario y
+                  devuelve coordenadas.
+                </td>
+              </tr>
+              <tr>
+                <td>Photon Komoot</td>
+                <td>
+                  <code>js/partes.js</code>, funcion
+                  <code>searchPhotonLocation()</code>
+                </td>
+                <td>
+                  Buscador alternativo si Nominatim no encuentra resultado o
+                  falla.
+                </td>
+              </tr>
+              <tr>
+                <td>OpenStreetMap Tiles</td>
+                <td>
+                  <code
+                    >L.tileLayer("https://{s}.tile.openstreetmap.org/...")</code
+                  >
+                </td>
+                <td>
+                  Descarga las imagenes del mapa que se muestran dentro de
+                  Leaflet.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="mobile-list">
+          <article class="mobile-item">
+            <h3>Nominatim OpenStreetMap</h3>
+            <p>
+              <span class="label">Donde</span><code>searchOpenStreetMap()</code>
+            </p>
+            <p>
+              <span class="label">Uso</span>Busca direcciones o kilometros y
+              devuelve coordenadas.
+            </p>
+          </article>
+          <article class="mobile-item">
+            <h3>Photon Komoot</h3>
+            <p>
+              <span class="label">Donde</span
+              ><code>searchPhotonLocation()</code>
+            </p>
+            <p>
+              <span class="label">Uso</span>Buscador alternativo para
+              ubicaciones.
+            </p>
+          </article>
+          <article class="mobile-item">
+            <h3>OpenStreetMap Tiles</h3>
+            <p><span class="label">Donde</span><code>L.tileLayer(...)</code></p>
+            <p>
+              <span class="label">Uso</span>Imagenes del mapa que se ven en
+              Leaflet.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>Librerias locales dentro de vendor</h2>
+          <p>
+            Estas dependencias ya estan descargadas en el proyecto y no
+            necesitan internet para cargar.
+          </p>
+        </div>
+        <div class="cards">
+          <div class="card">
+            <strong>Font Awesome</strong>
+            <span
+              ><code>vendor/fontawesome-free/</code><br />Iconos del
+              sistema.</span
+            >
+          </div>
+          <div class="card">
+            <strong>jQuery</strong>
+            <span><code>vendor/jquery/</code><br />Dependencia heredada.</span>
+          </div>
+          <div class="card">
+            <strong>Bootstrap</strong>
+            <span
+              ><code>vendor/bootstrap/</code><br />Componentes y
+              utilidades.</span
+            >
+          </div>
+          <div class="card">
+            <strong>jQuery Easing</strong>
+            <span
+              ><code>vendor/jquery-easing/</code><br />Animaciones para SB
+              Admin.</span
+            >
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>CDN o internet requerido</h2>
+          <p>Estas partes dependen de internet cuando se abre la pantalla.</p>
+        </div>
+        <div class="note">
+          <span class="tag net">SweetAlert2</span>
+          <span class="tag net">Leaflet</span>
+          <span class="tag net">Google Fonts</span>
+          <span class="tag net">OpenStreetMap</span>
+          <span class="tag net">Nominatim</span>
+          <span class="tag net">Photon</span>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>Nota de mantenimiento</h2>
+          <p>
+            Si una pantalla marca errores en consola por una libreria externa,
+            revisar:
+          </p>
+        </div>
+        <div class="note">
+          <ol class="checks">
+            <li>Que haya internet.</li>
+            <li>Que la URL del CDN siga activa.</li>
+            <li>
+              Que no haya atributos <code>integrity</code> desactualizados
+              bloqueando el recurso.
+            </li>
+            <li>
+              Que el orden de carga se mantenga: jQuery antes de Bootstrap,
+              jQuery Easing y SB Admin 2.
+            </li>
+          </ol>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

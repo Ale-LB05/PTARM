@@ -1,9 +1,14 @@
 const express = require("express");
+const multer = require("multer");
+const { PDFParse } = require("pdf-parse");
+const { createWorker } = require("tesseract.js");
 const db = require("../db");
 const { canAccess } = require("../middleware/auth");
-const { recordActivity } = require("../utils/activity");
+const { recordActivity, recordExportedParts } = require("../utils/activity");
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
+let ocrWorkerPromise = null;
 let peopleExtraColumnsReady = false;
 let peopleDetailTableReady = false;
 let partLocationColumnsReady = false;
@@ -150,6 +155,273 @@ function requirePartesExport(req, res, next) {
     return res.status(403).json({ success: false, error: "No tienes permiso para exportar partes" });
   }
   return next();
+}
+
+function importCleanKey(key = "") {
+  return String(key)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+function importCell(value) {
+  const clean = value === undefined || value === null ? "" : String(value).trim();
+  return /^campo vac[ií]o$/i.test(clean) ? "" : clean;
+}
+
+function importTruthy(value) {
+  return ["1", "si", "sí", "true", "x"].includes(String(value || "").trim().toLowerCase());
+}
+
+function importDateValue(value) {
+  const clean = importCell(value);
+  if (!clean) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+  if (/^\d+(\.\d+)?$/.test(clean)) {
+    const date = new Date(Math.round((Number(clean) - 25569) * 86400 * 1000));
+    return Number.isNaN(date.getTime()) ? clean : date.toISOString().slice(0, 10);
+  }
+  const date = new Date(clean);
+  return Number.isNaN(date.getTime()) ? clean : date.toISOString().slice(0, 10);
+}
+
+function importHeaderScore(row) {
+  const accepted = new Set([
+    "folio",
+    "motivo",
+    "tipo_parte",
+    "fecha",
+    "hora",
+    "respondiente",
+    "respondiente_nombre",
+    "mp",
+    "mp_asignado",
+    "mp_nombre",
+    "usuario_encargado",
+    "encargado_nombre",
+    "kilometro_o_referencia",
+    "ubicacion_kilometro",
+    "direccion",
+    "ubicacion_direccion",
+    "vehiculos",
+  ]);
+  return row.reduce((score, cell) => score + (accepted.has(importCleanKey(cell)) ? 1 : 0), 0);
+}
+
+function rowsToImportObjects(rows) {
+  const matrix = rows.map((row) => Object.values(row || {}).map((cell) => importCell(cell)));
+  const headerIndex = matrix.findIndex((row) => importHeaderScore(row) >= 3);
+  if (headerIndex < 0) return [];
+  const headers = matrix[headerIndex];
+  return matrix.slice(headerIndex + 1)
+    .filter((row) => row.some(Boolean))
+    .map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] || ""])));
+}
+
+function parseImportCsv(text) {
+  const rows = String(text || "").trim().split(/\r?\n/).filter(Boolean).map((line) => {
+    const cells = [];
+    let current = "";
+    let quoted = false;
+    for (let index = 0; index < line.length; index += 1) {
+      const char = line[index];
+      if (char === '"' && line[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else if (char === '"') {
+        quoted = !quoted;
+      } else if (char === "," && !quoted) {
+        cells.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    cells.push(current.trim());
+    return cells;
+  });
+  return rowsToImportObjects(rows);
+}
+
+function parseImportHtmlTable(html) {
+  const rows = [];
+  const rowMatches = String(html || "").match(/<tr[\s\S]*?<\/tr>/gi) || [];
+  rowMatches.forEach((rowHtml) => {
+    const cells = [];
+    const cellMatches = rowHtml.match(/<t[hd][\s\S]*?<\/t[hd]>/gi) || [];
+    cellMatches.forEach((cellHtml) => {
+      cells.push(cellHtml.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim());
+    });
+    rows.push(cells);
+  });
+  return rowsToImportObjects(rows);
+}
+
+function parseVehicleSummary(value = "") {
+  const text = String(value || "").trim();
+  if (!text || text.toLowerCase().includes("campo vac")) return [];
+  return text.split("|").map((chunk) => {
+    const read = (label) => {
+      const match = chunk.match(new RegExp(`${label}\\s+([^/|]+)`, "i"));
+      return match ? match[1].trim() : "";
+    };
+    return {
+      tipo_vehiculo: read("Clase") || "Vehiculo",
+      marca: read("Marca"),
+      modelo: read("Modelo"),
+      tipo: read("Tipo"),
+      numero_serie: read("Serie"),
+      numero_placa: read("Placa"),
+      corralon: read("Corral[oó]n"),
+      estatus_vehiculo: read("Estatus") || "Sin clasificar",
+      danos_vehiculo: read("Da[ñn]os"),
+    };
+  }).filter((vehicle) => Object.values(vehicle).some(Boolean));
+}
+
+function normalizeImportRow(row) {
+  const normalized = {};
+  Object.entries(row).forEach(([key, value]) => {
+    normalized[importCleanKey(key)] = importCell(value);
+  });
+  if (!Object.values(normalized).some(Boolean)) return null;
+  const vehicles = parseVehicleSummary(normalized.vehiculos);
+  return {
+    folio: normalized.folio,
+    tipo_parte: normalized.tipo_parte || normalized.motivo,
+    fecha: importDateValue(normalized.fecha),
+    hora: normalized.hora,
+    respondiente_nombre: normalized.respondiente_nombre || normalized.respondiente,
+    mp_nombre: normalized.mp_nombre || normalized.mp || normalized.mp_asignado,
+    estado: normalized.estado || "Activo",
+    gravedad_general: normalized.gravedad_general || "Sin clasificar",
+    ubicacion_kilometro: normalized.ubicacion_kilometro || normalized.kilometro_o_referencia,
+    ubicacion_direccion: normalized.ubicacion_direccion || normalized.direccion,
+    numero_personas: normalized.numero_personas || normalized.total_personas,
+    personas_fallecidas: importTruthy(normalized.personas_fallecidas || normalized.fallecidas),
+    numero_fallecidos: normalized.numero_fallecidos,
+    personas_heridas: importTruthy(normalized.personas_heridas || normalized.heridas),
+    numero_heridos: normalized.numero_heridos,
+    otros: importTruthy(normalized.otros),
+    gravedad: normalized.gravedad || normalized.gravedad_personas,
+    observacion_fallecidos: normalized.observacion_fallecidos,
+    observaciones: normalized.observaciones,
+    vehiculos: vehicles.length ? vehicles : [{
+      tipo_vehiculo: normalized.tipo_vehiculo || "Vehiculo",
+      marca: normalized.marca,
+      modelo: normalized.modelo,
+      tipo: normalized.tipo,
+      numero_serie: normalized.numero_serie,
+      numero_placa: normalized.numero_placa,
+      corralon: normalized.corralon,
+      estatus_vehiculo: normalized.estatus_vehiculo || "Sin clasificar",
+      danos_vehiculo: normalized.danos_vehiculo,
+    }],
+  };
+}
+
+function importMissingFields(row) {
+  const required = [
+    ["folio", "folio"],
+    ["tipo_parte", "motivo"],
+    ["fecha", "fecha"],
+    ["hora", "hora"],
+    ["respondiente_nombre", "respondiente"],
+  ];
+  return required
+    .filter(([key]) => !nullable(row[key]))
+    .map(([, label]) => label);
+}
+
+function importPdfLines(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
+function importPdfValue(lines, labels) {
+  const normalizedLabels = labels.map(importCleanKey);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const key = importCleanKey(line);
+    for (const label of normalizedLabels) {
+      if (key === label) return importCell(lines[index + 1]);
+      if (!key.startsWith(label)) continue;
+      const remainder = line.slice(line.toLowerCase().indexOf(labels[normalizedLabels.indexOf(label)].toLowerCase()) + labels[normalizedLabels.indexOf(label)].length)
+        .replace(/^[\s:#-]+/, "");
+      if (remainder) return importCell(remainder);
+      return importCell(lines[index + 1]);
+    }
+  }
+  return "";
+}
+
+function importPdfFirstMatch(text, expression) {
+  const match = String(text || "").match(expression);
+  return match ? importCell(match[1]) : "";
+}
+
+function importRowsFromPdfText(text, { allowMultiple = true } = {}) {
+  const chunks = String(text || "").split(/(?=INFORME POLICIAL HOMOLOGADO)/i).filter((chunk) => chunk.trim());
+  const sources = allowMultiple && chunks.length ? chunks : [text];
+  return sources.map((source) => {
+    const lines = importPdfLines(source);
+    const facts = String(source).match(/^([^\r\n]+?)[ \t]+(Sin clasificar|Bajo|Medio|Alto|Otro)[ \t]+([^\r\n]+?)(?:[ \t]+\d{1,2}\/\d{1,2}\/\d{2,4}.*)?$/im);
+    const row = {
+      folio: importPdfValue(lines, ["No. de parte / folio", "No. de parte", "Folio"])
+        || importPdfFirstMatch(source, /\b((?:FIG|FOLIO|PARTE)[-\s]?[A-Z0-9-]{4,})\b/i),
+      tipo_parte: importPdfValue(lines, ["Motivo del parte", "Motivo", "Tipo de hecho"]) || importCell(facts?.[1]),
+      fecha: importPdfValue(lines, ["Fecha"]) || importPdfFirstMatch(source, /\b(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})\b/),
+      hora: importPdfValue(lines, ["Hora"]) || importPdfFirstMatch(source, /\b(\d{1,2}:\d{2}(?::\d{2})?)\b/),
+      respondiente_nombre: importPdfValue(lines, ["Respondiente", "Policia respondiente"]) || importCell(facts?.[3]),
+      mp_nombre: importPdfValue(lines, ["MP asignado", "Ministerio publico", "MP"]),
+      estado: importPdfValue(lines, ["Estado"]) || importPdfFirstMatch(source, /\b(Borrador|Activo|Cerrado|Archivado|Cancelado)\b/i),
+      gravedad_general: importPdfValue(lines, ["Gravedad general"]) || importCell(facts?.[2]) || importPdfFirstMatch(source, /\b(Sin clasificar|Bajo|Medio|Alto|Otro)\b/i),
+      ubicacion_kilometro: importPdfValue(lines, ["Kilometro o referencia", "Kilometro", "Referencia"]),
+      ubicacion_direccion: importPdfValue(lines, ["Direccion OpenStreetMap", "Direccion", "Domicilio"]),
+      numero_personas: importPdfValue(lines, ["Numero de personas", "Personas involucradas"]),
+      numero_fallecidos: importPdfValue(lines, ["Numero de fallecidos", "Fallecidos"]),
+      numero_heridos: importPdfValue(lines, ["Numero de heridos", "Heridos"]),
+      observaciones: importPdfValue(lines, ["Observaciones", "Observacion"]),
+      marca: importPdfValue(lines, ["Marca"]),
+      modelo: importPdfValue(lines, ["Modelo"]),
+      tipo: importPdfValue(lines, ["Tipo de vehiculo"]),
+      numero_serie: importPdfValue(lines, ["No. serie", "Numero de serie", "Serie"]),
+      numero_placa: importPdfValue(lines, ["No. placa", "Numero de placa", "Placa"]),
+    };
+    row.personas_fallecidas = Number(row.numero_fallecidos || 0) > 0 ? "Si" : "";
+    row.personas_heridas = Number(row.numero_heridos || 0) > 0 ? "Si" : "";
+    const normalized = normalizeImportRow(row);
+    if (!normalized) return null;
+    if (!normalized.folio && !normalized.tipo_parte && !normalized.respondiente_nombre) return null;
+    normalized._missing_fields = importMissingFields(normalized);
+    return normalized;
+  }).filter(Boolean);
+}
+
+function getOcrWorker() {
+  if (!ocrWorkerPromise) {
+    ocrWorkerPromise = createWorker("spa+eng");
+  }
+  return ocrWorkerPromise;
+}
+
+async function filterDuplicateImportRows(rows) {
+  const folios = rows.map((row) => nullable(row.folio)).filter(Boolean);
+  if (!folios.length) return { rows, skipped: [] };
+  const [existing] = await db.query("SELECT folio FROM partes WHERE folio IN (?)", [folios]);
+  const existingFolios = new Set(existing.map((row) => String(row.folio).trim().toLowerCase()));
+  const kept = [];
+  const skipped = [];
+  rows.forEach((row) => {
+    const folio = String(row.folio || "").trim().toLowerCase();
+    if (folio && existingFolios.has(folio)) skipped.push(row);
+    else kept.push(row);
+  });
+  return { rows: kept, skipped };
 }
 
 /** Convierte cadenas vacias o valores indefinidos a NULL para la base de datos. */
@@ -349,15 +621,98 @@ router.get("/catalogos", async (req, res) => {
   res.json({ success: true, data: { mps, respondientes, corralones } });
 });
 
+// Previsualiza importaciones de Excel/CSV/HTML/PDF antes de crear partes en lote.
+router.post("/import/preview", requirePartesWrite, upload.single("archivo"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, error: "Sube un archivo valido para importar" });
+  }
+  const type = String(req.body.tipo || "excel").toLowerCase();
+  const name = String(req.file.originalname || "").toLowerCase();
+  if (type === "image") {
+    try {
+      const worker = await getOcrWorker();
+      const result = await worker.recognize(req.file.buffer);
+      const rows = importRowsFromPdfText(result.data.text, { allowMultiple: false });
+      if (!rows.length) {
+        return res.status(422).json({
+          success: false,
+          error: "No se reconocieron campos del parte. Usa una foto nitida, de frente y con buena iluminacion.",
+        });
+      }
+      const checked = await filterDuplicateImportRows(rows);
+      return res.json({
+        success: true,
+        data: checked.rows,
+        skipped: checked.skipped,
+        source: "ocr",
+        message: "Imagen leida con OCR",
+      });
+    } catch (error) {
+      ocrWorkerPromise = null;
+      return res.status(422).json({
+        success: false,
+        error: "No se pudo leer la imagen. Intenta con una foto mas clara o en formato PNG/JPG.",
+      });
+    }
+  }
+  if (type === "pdf") {
+    try {
+      const parser = new PDFParse({ data: req.file.buffer });
+      const parsed = await parser.getText();
+      await parser.destroy();
+      const rows = importRowsFromPdfText(parsed.text);
+      if (!rows.length) {
+        return res.status(422).json({
+          success: false,
+          error: "No se pudo reconocer texto util en el PDF. Si es un escaneo, sube una version con texto seleccionable.",
+        });
+      }
+      const checked = await filterDuplicateImportRows(rows);
+      return res.json({
+        success: true,
+        data: checked.rows,
+        skipped: checked.skipped,
+        source: "pdf",
+        message: "PDF leido para previsualizacion",
+      });
+    } catch (error) {
+      return res.status(422).json({
+        success: false,
+        error: "No se pudo leer el PDF. Verifica que el archivo no este protegido o danado.",
+      });
+    }
+  }
+  if (type !== "excel") {
+    return res.status(400).json({ success: false, error: "Tipo de importacion no soportado" });
+  }
+  if (name.endsWith(".xlsx")) {
+    return res.status(422).json({ success: false, error: "El archivo .xlsx se leera desde el navegador." });
+  }
+
+  const text = req.file.buffer.toString("utf8");
+  const rawRows = name.endsWith(".csv") ? parseImportCsv(text) : parseImportHtmlTable(text);
+  const rows = rawRows.map(normalizeImportRow).filter(Boolean);
+  const checked = await filterDuplicateImportRows(rows);
+  res.json({
+    success: true,
+    data: checked.rows,
+    skipped: checked.skipped,
+    source: name.endsWith(".csv") ? "csv" : "html",
+    message: "Plantilla leida correctamente",
+  });
+});
+
 // Registra en historial que un usuario exporto partes.
 router.post("/export", requirePartesExport, async (req, res) => {
   const total = Number(req.body.total || 0);
   const tipo = String(req.body.tipo || "archivo").toUpperCase();
+  const partIds = Array.isArray(req.body.partes) ? req.body.partes : [];
   await db.query("INSERT INTO historial_cambios (id_parte, id_usuario, accion, descripcion) VALUES (NULL, ?, 'EXPORTAR', ?)", [
     req.user.id,
     `Exportacion ${tipo} de ${total} parte(s)`,
   ]);
-  await recordActivity("EXPORTACION", { idUsuario: req.user.id, detalle: `Exportacion ${tipo} de ${total} parte(s)` });
+  const activityId = await recordActivity("EXPORTACION", { idUsuario: req.user.id, detalle: `Exportacion ${tipo} de ${total} parte(s)` });
+  await recordExportedParts(activityId, partIds);
   res.json({ success: true, message: "Exportacion registrada" });
 });
 
@@ -387,6 +742,12 @@ router.post("/", requirePartesWrite, async (req, res) => {
   await ensurePartTypeColumn();
   const data = req.body;
   const folio = nullable(data.folio) || `FIG-${Date.now()}`;
+  if (data._import_source && nullable(data.folio)) {
+    const [[existing]] = await db.query("SELECT id_parte FROM partes WHERE folio = ? LIMIT 1", [folio]);
+    if (existing) {
+      return res.status(409).json({ success: false, error: `El folio ${folio} ya existe. No se importara para evitar duplicados.` });
+    }
+  }
   const idMp = nullable(data.id_mp) || await findOrCreate("ministerios_publicos", "id_mp", data.mp_nombre);
   const idRespondiente = await findOrCreate("respondientes", "id_respondiente", data.respondiente_nombre);
 

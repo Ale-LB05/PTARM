@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const bcrypt = require("bcryptjs");
 const db = require("../db");
+const { requireRole } = require("../middleware/auth");
 
 const router = express.Router();
 const storage = multer.diskStorage({
@@ -47,7 +48,7 @@ router.get("/", async (req, res) => {
 });
 
 // Actualiza solo el correo desde el modal de perfil.
-router.patch("/correo", async (req, res) => {
+router.patch("/correo", requireRole("Administrador"), async (req, res) => {
   await ensureUserCurpColumn();
   const correo = String(req.body.correo || "").trim();
   if (!correo) return res.status(400).json({ success: false, error: "Ingresa un correo valido" });
@@ -62,7 +63,7 @@ router.patch("/correo", async (req, res) => {
 });
 
 // Actualiza solo la CURP desde el modal de perfil.
-router.patch("/curp", async (req, res) => {
+router.patch("/curp", requireRole("Administrador"), async (req, res) => {
   await ensureUserCurpColumn();
   const curp = String(req.body.curp || "").trim().toUpperCase();
   await db.query("UPDATE usuarios SET curp = ? WHERE id_usuario = ?", [curp || null, req.user.id]);
@@ -75,7 +76,7 @@ router.patch("/curp", async (req, res) => {
 });
 
 // Cambia solo la contrasena validando clave actual, longitud y confirmacion.
-router.patch("/password", async (req, res) => {
+router.patch("/password", requireRole("Administrador"), async (req, res) => {
   const currentPassword = String(req.body.current_password || "");
   const password = String(req.body.password || "");
   const confirmPassword = String(req.body.confirm_password || "");
@@ -93,7 +94,7 @@ router.patch("/password", async (req, res) => {
 });
 
 // Ruta anterior para actualizar varios datos del perfil, conservada por compatibilidad.
-router.post("/", upload.single("imagen"), async (req, res) => {
+router.post("/", requireRole("Administrador"), upload.single("imagen"), async (req, res) => {
   await ensureUserCurpColumn();
   const { nombre, correo, curp, password, instituto, cargo_grado } = req.body;
   const fields = ["nombre = ?", "correo = ?", "curp = ?", "instituto = ?", "cargo_grado = ?"];

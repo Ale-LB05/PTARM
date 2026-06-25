@@ -1,0 +1,315 @@
+<?php require_once __DIR__ . '/../config/db.php'; ?>
+<!--
+  Pantalla Personal.
+  Administra usuarios y catalogos. js/personal.js llama a /api/usuarios,
+  /api/mps y rutas relacionadas dentro de api/index.php.
+-->
+<!doctype html>
+<html lang="es">
+  <head>
+    <script>window.PTARM_BASE = <?= json_encode(app_base()) ?>;</script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const root = document.documentElement;
+        root.classList.add("booting");
+        try {
+          const isDark = localStorage.getItem("theme") === "dark";
+          root.dataset.theme = isDark ? "dark" : "light";
+          root.classList.toggle("theme-dark", isDark);
+          root.classList.toggle("sidebar-start-collapsed", localStorage.getItem("sidebarCollapsed") === "1");
+        } catch (_) {
+          root.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <style>
+      html.booting[data-theme="dark"],
+      html.booting[data-theme="dark"] body {
+        background: #0b1220;
+      }
+    </style>
+    <title>Personal | PTARM</title>
+    <link rel="icon" type="image/png" href="<?= app_url('img/logot.png') ?>" />
+    <link href="<?= app_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" />
+    <link rel="stylesheet" href="<?= app_url('css/styles.css') ?>?v=20260616usermodal" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="side-brand" href="<?= app_url('cruds/inicio.php') ?>">
+          <span class="brand-icon"><img src="<?= app_url('img/logot.png') ?>" alt="PTARM" /></span>
+          <span class="brand-text">PTARM</span>
+        </a>
+        <nav class="side-nav">
+          <a data-page="inicio" href="<?= app_url('cruds/inicio.php') ?>"
+            ><span class="nav-icon"><img src="<?= app_url('img/iconos/Inicio.png') ?>" alt="" /></span
+            ><span>Inicio</span></a
+          >
+          <div class="side-section">Administración</div>
+          <a data-page="personal" href="<?= app_url('cruds/personal.php') ?>"
+            ><span class="nav-icon"><img src="<?= app_url('img/iconos/personal.png') ?>" alt="" /></span
+            ><span>Personal</span></a
+          ><a data-page="partes" href="<?= app_url('registroPartes/partes.php') ?>"
+            ><span class="nav-icon"
+              ><img src="<?= app_url('img/iconos/gestion.png') ?>" alt="" /></span
+            ><span>Gestionar partes</span></a
+          ><a data-page="historial" href="<?= app_url('cruds/historial.php') ?>"
+            ><span class="nav-icon"><img src="<?= app_url('img/iconos/historial.png') ?>" alt="" /></span
+            ><span>Historial</span></a
+          >
+          <div class="side-section">Sesión</div>
+          <button onclick="logout()">
+            <span class="nav-icon"><img src="<?= app_url('img/iconos/salida.png') ?>" alt="" /></span
+            ><span>Cerrar Sesión</span></button
+          ><button class="collapse-btn" onclick="toggleSidebar()">
+            <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
+            ><span>Ocultar</span>
+          </button>
+        </nav>
+      </aside>
+      <main class="content">
+        <header class="topbar">
+          <a class="topbar-brand" href="<?= app_url('cruds/inicio.php') ?>">
+            <img class="logo" src="<?= app_url('img/Logo.png') ?>" alt="FGE" />
+            <span>Sistema de Partes </span>
+          </a>
+          <div class="user-menu">
+            <button class="user-top" type="button">
+              <i class="fas fa-bell"></i><span data-user-name></span
+              ><img data-user-photo alt="Perfil" />
+            </button>
+            <div class="user-dropdown animated--grow-in">
+              <a href="<?= app_url('cruds/perfil.php') ?>"><i class="fas fa-user"></i> Perfil</a
+              >
+            </div>
+          </div>
+        </header>
+        <section class="page">
+          <h1>Panel de Personal</h1>
+          <div class="history-tabs personal-tabs" role="tablist">
+            <button class="active" data-personal-tab="usuarios" type="button">
+              <i class="far fa-id-badge"></i> Usuarios
+            </button>
+            <button data-personal-tab="mps" type="button">
+              <i class="fas fa-user-shield"></i> Ministerios Públicos
+            </button>
+          </div>
+          <section class="personal-panel active" data-personal-panel="usuarios">
+          <div class="toolbar">
+            <div class="toolbar-left personal-toolbar-left">
+              <input
+                id="userSearch"
+                class="search"
+                placeholder="Buscar usuario"
+              /><button class="btn icon-only view-toggle active" id="userListViewBtn" type="button" title="Vista de lista"><i class="fas fa-list"></i></button
+              ><button class="btn icon-only view-toggle" id="userGridViewBtn" type="button" title="Vista de cuadros"><i class="fas fa-th"></i></button>
+            </div>
+            <div class="toolbar-right">
+              <button class="btn green" onclick="openUserModal('create')">
+                <i class="fas fa-user-plus"></i> Nuevo Usuario
+              </button>
+            </div>
+          </div>
+          <div class="table-controls compact">
+            <label class="inline-check"
+              >Mostrar
+              <select id="userPageSize">
+                <option value="5">5 usuarios</option>
+                <option value="10">10 usuarios</option>
+                <option value="15">15 usuarios</option>
+                <option value="20">20 usuarios</option>
+              </select></label
+            >
+            <div class="pager">
+              <button class="btn icon-only" id="userPrevPage" type="button" title="Página anterior">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <span id="userPageInfo"></span>
+              <button class="btn icon-only" id="userNextPage" type="button" title="Página siguiente">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+          <div id="userListView" class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>Rol</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="userRows"></tbody>
+            </table>
+          </div>
+          <div id="userGridView" class="user-grid-view" hidden></div>
+          </section>
+          <section class="personal-panel" data-personal-panel="mps" hidden>
+            <div class="section-head">
+              <div>
+                <h2>Ministerios Públicos</h2>
+                <p>Catálogo de MP disponibles para asignar en partes.</p>
+              </div>
+              <button class="btn green" onclick="openMpModal('create')">
+                <i class="fas fa-user-shield"></i> Nuevo MP
+              </button>
+            </div>
+            <div class="toolbar compact-toolbar">
+              <div class="toolbar-left personal-toolbar-left">
+                <input id="mpSearch" class="search" placeholder="Buscar MP" />
+                <button class="btn icon-only view-toggle active" id="mpListViewBtn" type="button" title="Vista de lista">
+                  <i class="fas fa-list"></i>
+                </button>
+                <button class="btn icon-only view-toggle" id="mpGridViewBtn" type="button" title="Vista de cuadros">
+                  <i class="fas fa-th"></i>
+                </button>
+              </div>
+            </div>
+            <div id="mpListView" class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Cargo/Grado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="mpRows"></tbody>
+              </table>
+            </div>
+            <div id="mpGridView" class="mp-grid-view" hidden></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div id="userModal" class="modal-backdrop">
+      <div class="modal user-modal">
+        <div class="modal-title">
+          <h2 id="userModalTitle">Nuevo Empleado</h2>
+          <button class="modal-close" onclick="closeModal('userModal')">
+            X
+          </button>
+        </div>
+        <form id="userForm" class="modal-body">
+          <input type="hidden" name="id_usuario" />
+          <div class="form-grid cols-2">
+            <label
+              >Nombre Completo<input
+                name="nombre"
+                placeholder="Apellido Paterno - Apellido Materno - Nombre(s)" /></label
+            ><label
+              >Institucion<input
+                name="instituto"
+                placeholder="Selecciona institución..." /></label
+            ><label
+              >Correo<input
+                type="email"
+                name="correo"
+                placeholder="correoelectronico@dominio.com" /></label
+            ><label
+              >CURP<input
+                name="curp"
+                maxlength="18"
+                placeholder="CURP del usuario" /></label
+            ><label
+              >Rol<select name="id_rol">
+                <option value="1">Administrador</option>
+                <option value="2">Capturista</option>
+                <option value="3">Auxiliar</option>
+              </select></label
+            >
+          </div>
+          <label
+            >Contraseña<input
+              type="password"
+              name="password"
+              placeholder="Dejar vacia al editar para conservar" /></label
+          ><label
+            >Cargo/Grado<input
+              name="cargo_grado"
+              placeholder="Cargo o grado" /></label
+          ><strong>Fotografía</strong>
+          <div class="photo-box">
+            <img
+              id="userPreview"
+              class="profile-avatar"
+              src="<?= app_url('img/usuario.png') ?>"
+              alt="Vista previa"
+            /><label class="file-upload"
+              >Seleccionar fotografía<input
+                type="file"
+                name="imagen"
+                accept="image/*"
+            /></label>
+          </div>
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn red"
+              onclick="closeModal('userModal')"
+            >
+              Cancelar</button
+            ><button class="btn green" id="userSubmit">Crear nuevo</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="mpModal" class="modal-backdrop">
+      <div class="modal small">
+        <div class="modal-title">
+          <h2 id="mpModalTitle">Nuevo MP</h2>
+          <button class="modal-close" onclick="closeModal('mpModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="mpForm" class="modal-body">
+          <label
+            >Nombre del MP<input
+              name="nombre"
+              placeholder="Nombre completo del Ministerio Público"
+          /></label>
+          <label
+            >Cargo/Grado<input
+              name="cargo_grado"
+              placeholder="Cargo o grado"
+          /></label>
+          <div class="form-actions">
+            <button type="button" class="btn red" onclick="closeModal('mpModal')">
+              Cancelar
+            </button>
+            <button class="btn green" id="mpSubmit">Crear MP</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="toast" class="toast"></div>
+    <div id="confirmModal" class="modal-backdrop">
+      <div class="modal small">
+        <div class="modal-title"><h2 data-confirm-title></h2></div>
+        <div class="modal-body" style="text-align: center">
+          <div class="alert-icon">!</div>
+          <p data-confirm-text></p>
+          <div class="form-actions">
+            <button class="btn" data-confirm-no>Cancelar</button
+            ><button class="btn red" data-confirm-yes>Aceptar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="<?= app_url('js/common.js') ?>?v=20260616historyphoto"></script>
+    <script src="<?= app_url('js/personal.js') ?>?v=20260616defaultuserphoto"></script>
+    <script src="<?= app_url('vendor/jquery/jquery.min.js') ?>"></script>
+    <script src="<?= app_url('vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
+    <script src="<?= app_url('vendor/jquery-easing/jquery.easing.min.js') ?>"></script>
+    <script src="<?= app_url('js/sb-admin-2.min.js') ?>?v=20260616historyphoto"></script>
+  </body>
+</html>
+
+
+

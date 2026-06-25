@@ -48,7 +48,7 @@
           ><a data-page="partes" href="/partes.html"
             ><span class="nav-icon"
               ><img src="/img/iconos/gestion.png" alt="" /></span
-            ><span>Gestionar partes</span></a
+            ><span>Gestionar Partes</span></a
           ><a data-page="historial" href="/historial.html"
             ><span class="nav-icon"><img src="/img/iconos/historial.png" alt="" /></span
             ><span>Historial</span></a
@@ -56,7 +56,7 @@
           <div class="side-section">Sesión</div>
           <button onclick="logout()">
             <span class="nav-icon"><img src="/img/iconos/salida.png" alt="" /></span
-            ><span>Cerrar sesión</span></button
+            ><span>Cerrar Sesión</span></button
           ><button class="collapse-btn" onclick="toggleSidebar()">
             <span class="nav-icon"><i class="fas fa-chevron-left"></i></span
             ><span>Ocultar</span>
@@ -66,8 +66,8 @@
       <main class="content">
         <header class="topbar">
           <a class="topbar-brand" href="/inicio.html">
-            <img class="logo" src="/img/Logo.png" alt="FGE" />
-            <span>Sistema de partes</span>
+            <img class="logo" src="/img/Logo.png" data-logo-light="/img/Logo.png" data-logo-dark="/img/logot.png" alt="FGE" />
+            <span>Sistema de Partes</span>
           </a>
           <div class="user-menu">
             <button class="user-top" type="button">
@@ -97,6 +97,7 @@
             </div>
             <div class="account-card">
               <h3>Información de cuenta</h3>
+              <p id="profileEditNotice" class="profile-note" hidden>La edición de datos de perfil está disponible solo para administradores.</p>
               <div class="account-row">
                 <div class="account-label">
                   <span>Nombre</span>
