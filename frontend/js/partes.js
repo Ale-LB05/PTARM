@@ -843,8 +843,9 @@ function renderExportRows() {
   exportRows.innerHTML =
     filtered
       .map(
-        (parte) => `
+        (parte, index) => `
           <tr>
+            <td>${index + 1}</td>
             <td>${parte.folio || ""}</td>
             <td>${parte.respondiente_nombre || "Parte de tránsito"}</td>
             <td>${formatDate(parte.fecha)}</td>
@@ -854,7 +855,7 @@ function renderExportRows() {
           </tr>
         `,
       )
-      .join("") || `<tr><td colspan="6">No hay partes para exportar.</td></tr>`;
+      .join("") || `<tr><td colspan="7">No hay partes para exportar.</td></tr>`;
   updateExportCount();
 }
 
@@ -1088,6 +1089,68 @@ function exportField(label, value) {
 
 /** Construye un archivo HTML compatible con Excel con resumen y detalle. */
 function excelHtml(rows) {
+  const generatedAt = escapeHtml(new Date().toLocaleString("es-MX"));
+  return `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body{font-family:Arial,sans-serif}
+          h1{color:#06145f}
+          table{border-collapse:collapse;width:100%;margin-bottom:18px;table-layout:auto}
+          th{background:#06145f;color:#fff;font-weight:700}
+          th,td{border:1px solid #b9c0d4;padding:8px;text-align:left;vertical-align:top;white-space:normal}
+          td.no,td.center{text-align:center}
+          .empty-field{color:#6b7280;font-style:italic}
+        </style>
+      </head>
+      <body>
+        <h1>Partes de transito</h1>
+        <p>Total de partes: ${rows.length} | Generado: ${generatedAt}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>No.</th><th>Folio</th><th>Motivo</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Gravedad</th>
+              <th>Respondiente</th><th>MP asignado</th><th>Usuario encargado</th><th>Kilometro</th><th>Direccion</th><th>Latitud</th><th>Longitud</th>
+              <th>Personas</th><th>Detalle personas</th><th>Personas fallecidas</th><th>Fallecidos</th><th>Personas heridas</th><th>Heridos</th><th>Otros</th>
+              <th>Observacion fallecidos</th><th>Observaciones</th><th>Vehiculos</th><th>ID parte</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((parte, index) => `
+              <tr>
+                <td class="no">${index + 1}</td>
+                <td>${fieldHtml(parte.folio)}</td>
+                <td>${fieldHtml(parte.tipo_parte)}</td>
+                <td>${fieldHtml(formatDate(parte.fecha))}</td>
+                <td>${fieldHtml(parte.hora)}</td>
+                <td>${fieldHtml(parte.estado)}</td>
+                <td>${fieldHtml(parte.gravedad_general)}</td>
+                <td>${fieldHtml(parte.respondiente_nombre)}</td>
+                <td>${fieldHtml(parte.mp_nombre)}</td>
+                <td>${fieldHtml(parte.encargado_nombre)}</td>
+                <td>${fieldHtml(parte.ubicacion_kilometro)}</td>
+                <td>${fieldHtml(parte.ubicacion_direccion)}</td>
+                <td>${fieldHtml(parte.ubicacion_lat)}</td>
+                <td>${fieldHtml(parte.ubicacion_lng)}</td>
+                <td>${fieldHtml(parte.numero_personas)}</td>
+                <td>${fieldHtml(peopleSummary(parte.personas_detalle))}</td>
+                <td class="center">${fieldHtml(boolText(parte.personas_fallecidas))}</td>
+                <td>${fieldHtml(parte.numero_fallecidos)}</td>
+                <td class="center">${fieldHtml(boolText(parte.personas_heridas))}</td>
+                <td>${fieldHtml(parte.numero_heridos)}</td>
+                <td class="center">${fieldHtml(boolText(parte.otros))}</td>
+                <td>${fieldHtml(parte.observacion_fallecidos)}</td>
+                <td>${fieldHtml(parte.observaciones)}</td>
+                <td>${fieldHtml(vehicleSummary(parte.vehiculos))}</td>
+                <td>${fieldHtml(parte.id_parte)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
   return `
     <html>
       <head>
