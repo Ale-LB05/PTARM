@@ -1,9 +1,0 @@
-{
-  "name": "ptarm/partes",
-  "description": "Dependencias PHP para importar partes desde Excel, PDF e imagenes.",
-  "type": "project",
-  "require": {
-    "phpoffice/phpspreadsheet": "^2.2",
-    "smalot/pdfparser": "^2.11"
-  }
-}

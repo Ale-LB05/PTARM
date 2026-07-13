@@ -551,7 +551,7 @@ html.sidebar-start-collapsed .collapse-btn .nav-icon {
 }
 
 .page {
-  width: min(1060px, calc(100% - 48px));
+  width: min(1480px, calc(100% - clamp(28px, 4vw, 72px)));
   margin: 28px auto 46px;
 }
 
@@ -628,7 +628,7 @@ html.sidebar-start-collapsed .collapse-btn .nav-icon {
 }
 
 .personal-toolbar-left .search {
-  width: min(430px, 100%);
+  width: min(560px, 100%);
 }
 
 .inline-check {
@@ -644,7 +644,7 @@ html.sidebar-start-collapsed .collapse-btn .nav-icon {
 }
 
 .search {
-  width: min(360px, 100%);
+  width: min(430px, 100%);
   min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -833,11 +833,14 @@ select:focus {
 }
 
 .table-wrap {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   border: 1px solid var(--line-soft);
   border-radius: 12px;
   background: var(--panel);
   box-shadow: var(--surface-shadow);
+  scrollbar-gutter: stable;
 }
 
 .table-wrap + .table-wrap {
@@ -846,16 +849,16 @@ select:focus {
 
 table {
   width: 100%;
-  min-width: 760px;
+  min-width: 900px;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.88rem;
+  font-size: clamp(0.88rem, 0.22vw + 0.82rem, 0.98rem);
 }
 
 th,
 td {
   border-bottom: 1px solid var(--line-soft);
-  padding: 14px 16px;
+  padding: clamp(14px, 0.5vw + 10px, 20px) clamp(16px, 0.65vw + 10px, 24px);
   text-align: left;
   vertical-align: middle;
 }
@@ -929,6 +932,18 @@ tbody tr:hover {
 
 .icon-btn.delete {
   background: var(--red);
+}
+
+@media (min-width: 1500px) {
+  .table-wrap {
+    border-radius: 14px;
+  }
+
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 0.84rem;
+  }
 }
 
 .partes-grid-view,
@@ -2123,7 +2138,7 @@ legend {
 }
 
 .history-page {
-  width: min(1140px, calc(100% - 48px));
+  width: min(1540px, calc(100% - clamp(28px, 4vw, 72px)));
 }
 
 .history-tabs {
@@ -2166,7 +2181,7 @@ legend {
 }
 
 .search-wrap {
-  width: min(440px, 100%);
+  width: min(560px, 100%);
   min-height: 38px;
   display: grid;
   grid-template-columns: 34px 1fr;
@@ -2191,8 +2206,12 @@ legend {
 }
 
 .history-table {
-  width: min(1040px, 100%);
+  width: 100%;
   margin-left: 0;
+}
+
+.table-wrap.history-table table {
+  min-width: 1040px;
 }
 
 .stats-panel {
@@ -2767,6 +2786,12 @@ legend {
 }
 
 @media (max-width: 900px) {
+  .page,
+  .history-page {
+    width: min(100% - 24px, 100%);
+    margin-top: 20px;
+  }
+
   .app-shell,
   .app-shell.sidebar-collapsed {
     grid-template-columns: 72px 1fr;
@@ -2820,9 +2845,24 @@ legend {
     flex-direction: column;
   }
 
+  .search,
+  .search-wrap,
+  .personal-toolbar-left .search {
+    width: 100%;
+  }
+
   .table-controls {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  table {
+    min-width: 760px;
+  }
+
+  th,
+  td {
+    padding: 12px 14px;
   }
 
   .toolbar-left,

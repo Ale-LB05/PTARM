@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Perfil">
-  <circle cx="80" cy="80" r="76" fill="#d9edff" stroke="#06145f" stroke-width="6"/>
-  <circle cx="80" cy="62" r="28" fill="#ffd58a" stroke="#111827" stroke-width="5"/>
-  <path d="M42 135c6-28 25-42 38-42s32 14 38 42" fill="#4aa3df" stroke="#111827" stroke-width="5"/>
-  <path d="M58 52c10-28 48-22 48 8-14-8-28-8-48-8z" fill="#f7b733" stroke="#111827" stroke-width="5"/>
-  <path d="M69 93l11 20 11-20" fill="#fff" stroke="#111827" stroke-width="4"/>
-</svg>
